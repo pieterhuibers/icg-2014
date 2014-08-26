@@ -18,7 +18,7 @@ public class SketchWindow extends Composite
 	private Canvas3D canvas;
 	private SketchModel model;
 	
-	private Button clear, triangulate, midpoints, chordal, showAxes, resetCamera;
+	private Button clear, triangles, midpoints, chordal, showAxes, resetCamera;
 	
 	public SketchWindow(Composite parent, int style)
 	{
@@ -39,9 +39,9 @@ public class SketchWindow extends Composite
 		clear.setText("Clear");
 		clear.addSelectionListener(buttonListener);
 		
-		triangulate = new Button(this, SWT.NONE);
-		triangulate.setText("Triangulate");
-		triangulate.addSelectionListener(buttonListener);
+		triangles = new Button(this, SWT.NONE);
+		triangles.setText("Triangles");
+		triangles.addSelectionListener(buttonListener);
 		
 		midpoints = new Button(this, SWT.NONE);
 		midpoints.setText("Midpoints");
@@ -67,7 +67,7 @@ public class SketchWindow extends Composite
 		canvas.setBounds(5, 5, width-10, height-60);
 		
 		clear.setBounds(5, height-50, 80, 40);
-		triangulate.setBounds(90, height-50, 80, 40);
+		triangles.setBounds(90, height-50, 80, 40);
 		midpoints.setBounds(175, height-50, 80, 40);
 		chordal.setBounds(260, height-50, 80, 40);
 		showAxes.setBounds(345, height-50, 80, 40);

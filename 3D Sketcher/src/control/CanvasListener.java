@@ -119,6 +119,7 @@ public class CanvasListener implements MouseListener, MouseMoveListener, KeyList
 		if(model.firstPointClicked(point, canvas.getZoom()))
 		{
 			model.close();
+			model.triangulate();
 		}
 		else
 		{		
