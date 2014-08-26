@@ -1,7 +1,6 @@
 package view;
 
 import java.util.List;
-import java.util.Vector;
 
 import model.SketchModel;
 
@@ -18,9 +17,11 @@ import org.lwjgl.LWJGLException;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GLContext;
 import org.lwjgl.util.glu.GLU;
+import org.poly2tri.geometry.polygon.PolygonPoint;
 import org.poly2tri.triangulation.TriangulationPoint;
+import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
 
-import util.Vector3D;
+import util.DrawShape;
 import control.CanvasListener;
 
 public class Canvas3D extends Composite implements Runnable
@@ -37,6 +38,8 @@ public class Canvas3D extends Composite implements Runnable
 
 	private float zoom = 1.0f;
 	
+	private boolean showMidpoints = false;
+	private boolean showChordalAxis = false;
 	private boolean showAxes = true;
 
 	public Canvas3D(Composite parent, int style, SketchModel model)
@@ -92,7 +95,6 @@ public class Canvas3D extends Composite implements Runnable
 		});
 
 		GL11.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-//		GL11.glColor3f(1.0f, 0.0f, 0.0f);
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 		GL11.glClearDepth(1.0);
 		GL11.glLineWidth(2);
@@ -112,7 +114,7 @@ public class Canvas3D extends Composite implements Runnable
 
 	private void drawModel()
 	{
-		List<TriangulationPoint> points = model.getBase();
+		List<TriangulationPoint> points = model.getPoints();
 				
 		GL11.glBegin(GL11.GL_LINE_STRIP);
 		GL11.glColor3f(.3f, .5f, .8f);
@@ -124,8 +126,32 @@ public class Canvas3D extends Composite implements Runnable
 		{
 			GL11.glVertex3d(points.get(0).getX(), points.get(0).getY(), 0.0);
 		}
-		
 		GL11.glEnd();
+		
+		GL11.glColor3d(0.6, 0.2, 0.3);
+		for (TriangulationPoint point : points)
+		{
+			DrawShape.sphere(point.getX(), point.getY(), 0.0, 0.02);
+		}
+	}
+	
+	private void drawTriangles()
+	{
+		List<DelaunayTriangle> triangles = model.getTriangles();
+		if(triangles==null)
+			return;
+		
+		GL11.glColor3f(.6f, .6f, .6f);
+		for (DelaunayTriangle triangle : triangles)
+		{
+			GL11.glBegin(GL11.GL_LINE_STRIP);
+			GL11.glVertex3d(triangle.points[0].getX(), triangle.points[0].getY(), 0.0);
+			GL11.glVertex3d(triangle.points[1].getX(), triangle.points[1].getY(), 0.0);
+			GL11.glVertex3d(triangle.points[2].getX(), triangle.points[2].getY(), 0.0);
+			GL11.glEnd();
+		}
+		
+		
 	}
 
 	@Override
@@ -168,6 +194,29 @@ public class Canvas3D extends Composite implements Runnable
 			drawAxes();
 		drawPlane();
 		drawModel();
+		drawTriangles();
+		if(showMidpoints)
+			drawMidpoints();
+		if(showChordalAxis)
+			drawChordalAxis();
+		
+	}
+	
+	private void drawMidpoints()
+	{
+		if(model.getMidpoints()==null)
+			return;
+		GL11.glColor3d(0.6, 0.2, 0.3);
+		List<PolygonPoint> points = model.getMidpoints();
+		for (PolygonPoint midpoint : points)
+		{
+			DrawShape.sphere(midpoint.getX(), midpoint.getY(), 0.0, 0.02);
+		}
+	}
+	
+	private void drawChordalAxis()
+	{
+		
 	}
 
 	public void rotate(double x, double y)
@@ -235,6 +284,16 @@ public class Canvas3D extends Composite implements Runnable
 		this.showAxes = show;
 	}
 	
+	public void showMidpoints(boolean show)
+	{
+		this.showMidpoints = show;
+	}
+	
+	public void showChordalAxis(boolean show)
+	{
+		this.showChordalAxis = show;
+	}
+	
 	public boolean axesShown()
 	{
 		return showAxes;
@@ -243,6 +302,21 @@ public class Canvas3D extends Composite implements Runnable
 	public Camera getCamera()
 	{
 		return camera;
-	}	
+	}
+	
+	public float getZoom()
+	{
+		return zoom;
+	}
+
+	public boolean midpointsShown()
+	{
+		return showMidpoints;
+	}
+	
+	public boolean chordalAxisShown()
+	{
+		return showChordalAxis;
+	}
 
 }

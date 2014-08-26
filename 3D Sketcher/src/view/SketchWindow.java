@@ -18,7 +18,7 @@ public class SketchWindow extends Composite
 	private Canvas3D canvas;
 	private SketchModel model;
 	
-	private Button clear, triangulate, showAxes, resetCamera;
+	private Button clear, triangulate, midpoints, chordal, showAxes, resetCamera;
 	
 	public SketchWindow(Composite parent, int style)
 	{
@@ -35,13 +35,21 @@ public class SketchWindow extends Composite
 		canvas.setVisible(true);
 		SelectionListener buttonListener = new ButtonListener(model, canvas);
 						
+		clear = new Button(this, SWT.NONE);
+		clear.setText("Clear");
+		clear.addSelectionListener(buttonListener);
+		
 		triangulate = new Button(this, SWT.NONE);
 		triangulate.setText("Triangulate");
 		triangulate.addSelectionListener(buttonListener);
 		
-		clear = new Button(this, SWT.NONE);
-		clear.setText("Clear");
-		clear.addSelectionListener(buttonListener);
+		midpoints = new Button(this, SWT.NONE);
+		midpoints.setText("Midpoints");
+		midpoints.addSelectionListener(buttonListener);
+		
+		chordal = new Button(this, SWT.NONE);
+		chordal.setText("Chordal Axis");
+		chordal.addSelectionListener(buttonListener);
 		
 		showAxes = new Button(this, SWT.NONE);
 		showAxes.setText("Show Axes");
@@ -60,7 +68,9 @@ public class SketchWindow extends Composite
 		
 		clear.setBounds(5, height-50, 80, 40);
 		triangulate.setBounds(90, height-50, 80, 40);
-		showAxes.setBounds(175, height-50, 80, 40);
-		resetCamera.setBounds(260, height-50, 80, 40);
+		midpoints.setBounds(175, height-50, 80, 40);
+		chordal.setBounds(260, height-50, 80, 40);
+		showAxes.setBounds(345, height-50, 80, 40);
+		resetCamera.setBounds(430, height-50, 80, 40);
 	}
 }

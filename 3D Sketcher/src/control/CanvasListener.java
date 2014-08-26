@@ -54,8 +54,8 @@ public class CanvasListener implements MouseListener, MouseMoveListener, KeyList
 		if(e.button == 1)
 		{
 			leftMouseDown = true;
-			System.out.println(e.x);
-			getClickedPosition(e.x,e.y);
+			if(!model.isClosed())
+				addClickedPosition(e.x,e.y);
 		}
 		else if(e.button == 3)
 		{
@@ -110,16 +110,20 @@ public class CanvasListener implements MouseListener, MouseMoveListener, KeyList
 		
 	}
 	
-	private void getClickedPosition(int x, int y)
+	private void addClickedPosition(int x, int y)
 	{
 		Vector3D clickedVector = getClickedVector(x,y);
 		Vector3D camPosition = canvas.getCamera().getPosition();
-		
 		double factor = -camPosition.z/clickedVector.z;
-		
-		System.out.println((camPosition.x+factor*clickedVector.x)+","+(camPosition.y+factor*clickedVector.y));
-		
-		model.addPoint(new PolygonPoint((camPosition.x+factor*clickedVector.x), (camPosition.y+factor*clickedVector.y)));
+		PolygonPoint point = new PolygonPoint((camPosition.x+factor*clickedVector.x), (camPosition.y+factor*clickedVector.y));
+		if(model.firstPointClicked(point, canvas.getZoom()))
+		{
+			model.close();
+		}
+		else
+		{		
+			model.addPoint(point);
+		}
 	}
 	
 	private Vector3D getClickedVector(int x, int y)
@@ -127,14 +131,11 @@ public class CanvasListener implements MouseListener, MouseMoveListener, KeyList
 		double cameraPitch = canvas.getCamera().getPitch();
 		double cameraYaw = canvas.getCamera().getYaw();
 		Vector3D cameraVector = Util.toVelocityVector(cameraYaw, cameraPitch, 1.0);
-//		System.out.println("Cam pos = "+canvas.getCamera().getPosition());
-//		System.out.println("Cam vec = "+cameraVector);
 		Vector3D up = Util.toVelocityVector(cameraYaw, cameraPitch+90.0, 1.0);
 		Point2D point = getOffsetFromScreenCenter(x, y);
 		double aspectRatio = (double)canvas.getSize().x/(double)canvas.getSize().y;
-		double fov = 35.0;
-		double yawDegrees = fov*point.getX();
-		double pitchDegrees =  -fov*point.getY()/aspectRatio;
+		double yawDegrees = Math.toDegrees(Math.atan(point.getX()*0.61));
+		double pitchDegrees =  Math.toDegrees(Math.atan(-point.getY()*0.61/aspectRatio));
 		Vector3D clickedVector = new Vector3D(cameraVector);
 		clickedVector.rotateAroundAxis(up, Math.toRadians(-yawDegrees));
 		Vector3D left =  VectorUtil.getCrossProduct(clickedVector, up);

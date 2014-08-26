@@ -35,6 +35,20 @@ public class ButtonListener implements SelectionListener
 		{
 			model.clear();
 		}
+		else if(b.getText().equals("Triangulate"))
+		{
+			model.triangulate();			
+		}
+		else if(b.getText().equals("Midpoints"))
+		{
+			boolean midpointsShown = canvas.midpointsShown();
+			canvas.showMidpoints(!midpointsShown);			
+		}
+		else if(b.getText().equals("Chordal Axis"))
+		{
+			boolean chordalAxisShown = canvas.chordalAxisShown();
+			canvas.showMidpoints(!chordalAxisShown);			
+		}
 		else if(b.getText().equals("Show Axes"))
 		{
 			boolean axesShown = canvas.axesShown();
