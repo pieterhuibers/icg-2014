@@ -222,8 +222,11 @@ public class Canvas3D extends Composite implements Runnable
 					triangle.points[1].getY(), 0.0);
 			GL11.glVertex3d(triangle.points[2].getX(),
 					triangle.points[2].getY(), 0.0);
+			GL11.glVertex3d(triangle.points[0].getX(),
+					triangle.points[0].getY(), 0.0);
 			GL11.glEnd();
 		}
+		System.out.println(triangles.size());
 
 	}
 
@@ -242,36 +245,37 @@ public class Canvas3D extends Composite implements Runnable
 
 	private void drawChordalAxis()
 	{
+		if(model.getChordalAxis()==null)
+			return;
 		ChordalAxisPoint start = model.getChordalAxis().getStartPoint();
 		
 		GL11.glLineWidth(5.0f);
 		GL11.glBegin(GL11.GL_LINE_STRIP);
 		GL11.glColor3f(.3f, .5f, .3f);
-		drawChordalAxis(start);
-		//GL11.glVertex3d(point.getX(), point.getY(), 0.0);
+		drawChordalAxis(start,0.0);
 	}
 	
-	private void drawChordalAxis(ChordalAxisPoint point)
+	private void drawChordalAxis(ChordalAxisPoint point, double height)
 	{
 		ChordalAxisPoint o1 = point.getOutgoing1();
 		ChordalAxisPoint o2 = point.getOutgoing2();
 		if(o1==null && o2==null)	//terminal point
 		{
-			GL11.glVertex3d(point.getX(), point.getY(), 0.0);
+			GL11.glVertex3d(point.getX(), point.getY(), height);
 			GL11.glEnd();
 		}
 		else if(o1 != null && o2 == null) //one section
 		{
-			GL11.glVertex3d(point.getX(), point.getY(), 0.0);
-			drawChordalAxis(o1);
+			GL11.glVertex3d(point.getX(), point.getY(), height);
+			drawChordalAxis(o1,height);
 		}
 		else if(o1 != null && o2 != null) //split
 		{
-			GL11.glVertex3d(point.getX(), point.getY(), 0.0);
-			drawChordalAxis(o1);
+			GL11.glVertex3d(point.getX(), point.getY(), height);
+			drawChordalAxis(o1,height);
 			GL11.glBegin(GL11.GL_LINE_STRIP);
 			GL11.glVertex3d(point.getX(), point.getY(), 0.0);
-			drawChordalAxis(o2);
+			drawChordalAxis(o2,height);
 		}
 	}
 

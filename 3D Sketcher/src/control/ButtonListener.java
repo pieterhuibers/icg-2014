@@ -50,6 +50,10 @@ public class ButtonListener implements SelectionListener
 			boolean chordalAxisShown = canvas.chordalAxisShown();
 			canvas.showChordalAxis(!chordalAxisShown);			
 		}
+		else if(b.getText().equals("Prune"))
+		{
+			model.prune();			
+		}
 		else if(b.getText().equals("Show Axes"))
 		{
 			boolean axesShown = canvas.axesShown();

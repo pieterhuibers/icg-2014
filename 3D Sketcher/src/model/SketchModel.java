@@ -2,30 +2,31 @@ package model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 import org.poly2tri.Poly2Tri;
 import org.poly2tri.geometry.polygon.Polygon;
 import org.poly2tri.geometry.polygon.PolygonPoint;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
+import org.poly2tri.triangulation.util.Tuple2;
 
 public class SketchModel
 {
 	private PolygonPoint point1, point2;
 	private Polygon base;
+	private List<DelaunayTriangle> triangles;
 	private boolean closed = false;
-//	private List<PolygonPoint> midpoints;
 	private boolean pruned = false;
 	private List<DelaunayTriangle> s;
 	private List<DelaunayTriangle> j;
 	private List<DelaunayTriangle> t;
 	private List<DelaunayTriangle> considered;
 	private ChordalAxis chordalAxis;
+	private List<DelaunayTriangle> prunedTriangles;
+	private ChordalAxis prunedChordalAxis;
 
 	public SketchModel()
 	{
-//		midpoints = new ArrayList<PolygonPoint>();
 		s = new ArrayList<DelaunayTriangle>();
 		j = new ArrayList<DelaunayTriangle>();
 		t = new ArrayList<DelaunayTriangle>();
@@ -60,8 +61,9 @@ public class SketchModel
 		s.clear();
 		j.clear();
 		t.clear();
+		chordalAxis = null;
+		prunedChordalAxis = null;
 		considered.clear();
-//		midpoints.clear();
 		pruned = false;
 	}
 
@@ -73,8 +75,11 @@ public class SketchModel
 	public void triangulate()
 	{
 		Poly2Tri.triangulate(base);
-		calculateTriangleTypes();
+		triangles = base.getTriangles();
+		prunedTriangles = triangles;
+		this.calculateTriangleTypes();
 		this.calculateChordalAxis();
+		//this.prune();
 	}
 
 	private void calculateTriangleTypes()
@@ -119,6 +124,14 @@ public class SketchModel
 		}
 		return result;
 	}
+	
+	private TriangulationPoint calculateMidpoint(TriangulationPoint p1, TriangulationPoint p2)
+	{
+		TriangulationPoint midpoint = new PolygonPoint(
+				(p1.getX() + p2.getX()) / 2.0,
+				(p1.getY() + p2.getY()) / 2.0);
+		return midpoint;
+	}
 
 	private TriangulationPoint[] getMidPoints(DelaunayTriangle triangle)
 	{
@@ -132,9 +145,7 @@ public class SketchModel
 				TriangulationPoint p2 = triangle.points[(i + 1) % 3];
 				if (isInnerEdge(p1, p2))
 				{
-					TriangulationPoint midpoint = new PolygonPoint(
-							(p1.getX() + p2.getX()) / 2.0,
-							(p1.getY() + p2.getY()) / 2.0);
+					TriangulationPoint midpoint = calculateMidpoint(p1,p2);
 						result[0] = midpoint;
 				}
 			}
@@ -149,9 +160,7 @@ public class SketchModel
 				TriangulationPoint p2 = triangle.points[(i + 1) % 3];
 				if (isInnerEdge(p1, p2))
 				{
-					TriangulationPoint midpoint = new PolygonPoint(
-							(p1.getX() + p2.getX()) / 2.0,
-							(p1.getY() + p2.getY()) / 2.0);
+					TriangulationPoint midpoint = calculateMidpoint(p1,p2);
 						result[index] = midpoint;
 						index++;
 				}
@@ -167,9 +176,7 @@ public class SketchModel
 				TriangulationPoint p2 = triangle.points[(i + 1) % 3];
 				if (isInnerEdge(p1, p2))
 				{
-					TriangulationPoint midpoint = new PolygonPoint(
-							(p1.getX() + p2.getX()) / 2.0,
-							(p1.getY() + p2.getY()) / 2.0);
+					TriangulationPoint midpoint = calculateMidpoint(p1,p2);
 						result[index] = midpoint;
 						index++;
 				}
@@ -311,21 +318,6 @@ public class SketchModel
 		return result;
 	}
 
-	private void calculatePrunedChordalAxis()
-	{
-
-	}
-
-//	private boolean pointAlreadyExists(TriangulationPoint point)
-//	{
-//		for (TriangulationPoint midPoint : midpoints)
-//		{
-//			if (distance(point, midPoint) < 0.005)
-//				return true;
-//		}
-//		return false;
-//	}
-
 	private boolean isInnerEdge(TriangulationPoint p1, TriangulationPoint p2)
 	{
 		List<TriangulationPoint> points = base.getPoints();
@@ -350,8 +342,47 @@ public class SketchModel
 
 	public void prune()
 	{
-
+		for (DelaunayTriangle terminal : t)
+		{
+			pruneFromTerminal(terminal);
+		}
 	}
+	
+	private void pruneFromTerminal(DelaunayTriangle terminal)
+	{
+		List<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
+		TriangulationPoint external = findExternalPoint(terminal);
+		Tuple2<TriangulationPoint, TriangulationPoint> remaining = findRemainingPoints(terminal, external);
+		TriangulationPoint midpoint = calculateMidpoint(remaining.a,remaining.b);
+		double radius = distance(midpoint, remaining.a);
+		if(distance(midpoint, external)>radius)
+		{
+			//stop
+		}
+		else
+		{
+			//remove edge and continue
+			prunedTriangles.remove(terminal);
+		}
+	}
+	
+	private Tuple2<TriangulationPoint, TriangulationPoint> findRemainingPoints(DelaunayTriangle triangle, TriangulationPoint point)
+	{
+		if(point==triangle.points[0])
+		{
+			return new Tuple2<TriangulationPoint, TriangulationPoint>(triangle.points[1], triangle.points[2]);
+		}
+		else if(point==triangle.points[1])
+		{
+			return new Tuple2<TriangulationPoint, TriangulationPoint>(triangle.points[0], triangle.points[2]);
+		}
+		else if(point==triangle.points[2])
+		{
+			return new Tuple2<TriangulationPoint, TriangulationPoint>(triangle.points[0], triangle.points[1]);
+		}
+		return null;
+	}
+	
 
 	public boolean firstPointClicked(PolygonPoint point, double zoomLevel)
 	{
@@ -384,9 +415,7 @@ public class SketchModel
 
 	public List<DelaunayTriangle> getTriangles()
 	{
-		if (base == null)
-			return null;
-		return base.getTriangles();
+		return triangles;
 	}
 	
 	public ChordalAxis getChordalAxis()
