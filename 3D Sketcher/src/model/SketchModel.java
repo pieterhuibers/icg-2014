@@ -1,6 +1,7 @@
 package model;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.poly2tri.Poly2Tri;
@@ -8,6 +9,7 @@ import org.poly2tri.geometry.polygon.Polygon;
 import org.poly2tri.geometry.polygon.PolygonPoint;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
+import org.poly2tri.triangulation.delaunay.sweep.DTSweepConstraint;
 import org.poly2tri.triangulation.util.Tuple2;
 
 public class SketchModel
@@ -30,6 +32,8 @@ public class SketchModel
 		s = new ArrayList<DelaunayTriangle>();
 		j = new ArrayList<DelaunayTriangle>();
 		t = new ArrayList<DelaunayTriangle>();
+		triangles = new ArrayList<DelaunayTriangle>();
+		prunedTriangles = new ArrayList<DelaunayTriangle>();
 		considered = new ArrayList<DelaunayTriangle>();
 	}
 
@@ -61,6 +65,8 @@ public class SketchModel
 		s.clear();
 		j.clear();
 		t.clear();
+		triangles.clear();
+		prunedTriangles.clear();
 		chordalAxis = null;
 		prunedChordalAxis = null;
 		considered.clear();
@@ -76,10 +82,20 @@ public class SketchModel
 	{
 		Poly2Tri.triangulate(base);
 		triangles = base.getTriangles();
-		prunedTriangles = triangles;
+		copyTriangles();
 		this.calculateTriangleTypes();
 		this.calculateChordalAxis();
-		//this.prune();
+		this.prune();
+	}
+	
+	private void copyTriangles()
+	{
+		for (DelaunayTriangle triangle : triangles)
+		{
+//			TriangulationPoint[] points = triangle.points;
+//			DelaunayTriangle clone = new DelaunayTriangle(points[0], points[1], points[2]);
+			prunedTriangles.add(triangle);
+		}
 	}
 
 	private void calculateTriangleTypes()
@@ -340,7 +356,7 @@ public class SketchModel
 				+ (p1.getY() - p2.getY()) * (p1.getY() - p2.getY()));
 	}
 
-	public void prune()
+	private void prune()
 	{
 		for (DelaunayTriangle terminal : t)
 		{
@@ -350,21 +366,200 @@ public class SketchModel
 	
 	private void pruneFromTerminal(DelaunayTriangle terminal)
 	{
-		List<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
 		TriangulationPoint external = findExternalPoint(terminal);
 		Tuple2<TriangulationPoint, TriangulationPoint> remaining = findRemainingPoints(terminal, external);
-		TriangulationPoint midpoint = calculateMidpoint(remaining.a,remaining.b);
-		double radius = distance(midpoint, remaining.a);
-		if(distance(midpoint, external)>radius)
+		ArrayList<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
+		pointsToCheck.add(external);
+		prune(terminal, remaining.a, remaining.b, pointsToCheck, null);
+	}
+	
+	private void prune(DelaunayTriangle triangle, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> pointsToCheck, DelaunayTriangle previousTriangle)
+	{
+		TriangulationPoint midpoint = calculateMidpoint(a,b);
+		double radius = distance(midpoint, a);
+		boolean prune = true;
+		for (TriangulationPoint point : pointsToCheck)
 		{
-			//stop
+			if(distance(midpoint, point) > radius)
+			{
+				prune = false;
+				break;
+			}
+		}
+		if(j.contains(triangle))
+		{
+			prune = false;
+		}
+		if(prune)
+		{
+			prunedTriangles.remove(triangle);	
+			DelaunayTriangle next = getNextTriangle(triangle,previousTriangle);
+			DelaunayTriangle nextNext = getNextTriangle(next,triangle);
+			TriangulationPoint shared = getSharedPoint(triangle, next, nextNext);
+			for(int i=0; i<3; i++)
+			{
+				if(distance(triangle.points[i],shared) > 0.05 && !pointsToCheck.contains(triangle.points[i]))
+					pointsToCheck.add(triangle.points[i]);
+			}
+			Tuple2<TriangulationPoint, TriangulationPoint> edge = getSharedEdge(next,nextNext);
+			prune(next,edge.a,edge.b, pointsToCheck, triangle);
 		}
 		else
 		{
-			//remove edge and continue
-			prunedTriangles.remove(terminal);
+			fanOut(triangle, a, b, pointsToCheck);
 		}
 	}
+	
+	private TriangulationPoint getSharedPoint(DelaunayTriangle triangle1, DelaunayTriangle triangle2, DelaunayTriangle triangle3)
+	{
+		for (int i = 0; i < triangle1.points.length; i++)
+		{
+			if(hasPoint(triangle2, triangle1.points[i]) && hasPoint(triangle2, triangle1.points[i]))
+				return triangle1.points[i];
+		}
+		return null;
+	}
+	
+	private boolean hasPoint(DelaunayTriangle triangle, TriangulationPoint point)
+	{
+		for (int i = 0; i < triangle.points.length; i++)
+		{
+			if(distance(triangle.points[i], point) < 0.005)
+				return true;
+		}
+		return false;
+	}
+	
+	//This only works for terminal or sleeve triangles (triangles with one or two internal neighbouring triangles
+	private DelaunayTriangle getNextTriangle(DelaunayTriangle current, DelaunayTriangle previous)
+	{
+		DelaunayTriangle next;
+		DelaunayTriangle[] neighbours = getInternalNeighbours(current);
+		if(neighbours.length==1)
+		{
+			next = neighbours[0];
+		}
+		else if(neighbours.length==1)
+		{
+			if(neighbours[0]==previous)
+				next = neighbours[1];
+			else
+				next = neighbours[0];
+		}
+		else
+		{
+			//No problem, current triangle will not be pruned since it is a junction triangle
+			next = neighbours[0];
+		}
+		return next;
+	}
+	
+	private void fanOut(DelaunayTriangle triangle, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> points)
+	{
+		TriangulationPoint midpoint = calculateMidpoint(a,b);
+		List<TriangulationPoint> fanPoints = getIntermediatePoints(a, b);
+		for (int i = 0; i < fanPoints.size()-1; i++)
+		{
+			DelaunayTriangle fanTriangle = new DelaunayTriangle(midpoint, fanPoints.get(i), fanPoints.get(i+1));
+			prunedTriangles.add(fanTriangle);
+		}
+	}
+	
+	private List<TriangulationPoint> getIntermediatePoints(TriangulationPoint start, TriangulationPoint end)
+	{
+		ArrayList<TriangulationPoint> result;
+		int startIndex = base.getPoints().indexOf(start);
+		int endIndex = base.getPoints().indexOf(end);
+		
+		int distanceInside = Math.abs(endIndex-startIndex) + 1;
+		int distanceOutside = base.getPoints().size() - Math.max(startIndex,endIndex) + Math.min(startIndex,endIndex) + 1;
+		boolean startIndexSmaller = Math.min(startIndex, endIndex)==startIndex;
+		if(startIndexSmaller)
+		{
+			if(distanceInside<=distanceOutside)
+			{
+				result = buildList(startIndex,endIndex,true);
+			}
+			else
+			{
+				result = buildList(startIndex,endIndex,false);
+			}
+		}
+		else
+		{
+			if(distanceInside<=distanceOutside)
+			{
+				result = buildList(startIndex,endIndex,false);
+			}
+			else
+			{
+				result = buildList(startIndex,endIndex,true);
+			}
+		}
+		
+		
+		return result;
+	}
+	
+	private ArrayList<TriangulationPoint> buildList(int startIndex, int endIndex, boolean forward)
+	{
+		List<TriangulationPoint> points = base.getPoints();
+		ArrayList<TriangulationPoint> result = new ArrayList<TriangulationPoint>();
+		int index = startIndex;
+		while(index!=endIndex)
+		{
+			result.add(points.get(index));
+			if(forward)
+			{
+				index++;
+				if(index==points.size())
+					index = 0;
+			}
+			else
+			{
+				index--;
+				if(index==-1)
+					index = points.size()-1;
+			}
+		}
+		result.add(points.get(endIndex));
+		return result;
+	}
+	
+	private Tuple2<TriangulationPoint, TriangulationPoint> getSharedEdge(DelaunayTriangle triangle1, DelaunayTriangle triangle2)
+	{
+		Tuple2<TriangulationPoint, TriangulationPoint> result = new Tuple2<TriangulationPoint, TriangulationPoint>(null, null);
+		
+		TriangulationPoint[] p1 = triangle1.points;
+		TriangulationPoint[] p2 = triangle2.points;
+		
+		for (int i = 0; i < p2.length; i++)
+		{
+			if(distance(p1[0], p2[i])<0.005)
+			{
+				result.a = p1[0];
+			}
+		}
+		for (int i = 0; i < p2.length; i++)
+		{
+			if(distance(p1[1], p2[i])<0.005)
+			{
+				if(result.a==null)
+					result.a = p1[1];
+				else
+					result.b = p1[1];
+			}
+		}
+		for (int i = 0; i < p2.length; i++)
+		{
+			if(distance(p1[2], p2[i])<0.005)
+			{
+				result.b = p1[2];
+			}
+		}
+		return result;
+	}
+	
 	
 	private Tuple2<TriangulationPoint, TriangulationPoint> findRemainingPoints(DelaunayTriangle triangle, TriangulationPoint point)
 	{
@@ -416,6 +611,16 @@ public class SketchModel
 	public List<DelaunayTriangle> getTriangles()
 	{
 		return triangles;
+	}
+	
+	public List<DelaunayTriangle> getPrunedTriangles()
+	{
+		return prunedTriangles;
+	}
+	
+	public ChordalAxis getPrunedChordalAxis()
+	{
+		return prunedChordalAxis;
 	}
 	
 	public ChordalAxis getChordalAxis()

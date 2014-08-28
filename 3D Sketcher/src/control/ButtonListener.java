@@ -35,6 +35,11 @@ public class ButtonListener implements SelectionListener
 		{
 			model.clear();
 		}
+		else if(b.getText().equals("Outline"))
+		{
+			boolean outlineShown = canvas.outlineShown();
+			canvas.showOutline(!outlineShown);			
+		}
 		else if(b.getText().equals("Triangles"))
 		{
 			boolean trianglesShown = canvas.trianglesShown();
@@ -50,9 +55,20 @@ public class ButtonListener implements SelectionListener
 			boolean chordalAxisShown = canvas.chordalAxisShown();
 			canvas.showChordalAxis(!chordalAxisShown);			
 		}
-		else if(b.getText().equals("Prune"))
+		else if(b.getText().equals("Pruned"))
 		{
-			model.prune();			
+			boolean prunedShown = canvas.prunedShown();
+			canvas.showPruned(!prunedShown);			
+		}
+		else if(b.getText().equals("Raised"))
+		{
+			boolean raisedShown = canvas.raiseAxisShown();
+			canvas.showRaisedAxis(!raisedShown);
+		}
+		else if(b.getText().equals("Show Mesh"))
+		{
+			boolean meshShown = canvas.meshShown();
+			canvas.showMesh(!meshShown);
 		}
 		else if(b.getText().equals("Show Axes"))
 		{

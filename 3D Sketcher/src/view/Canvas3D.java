@@ -38,9 +38,14 @@ public class Canvas3D extends Composite implements Runnable
 
 	private float zoom = 1.0f;
 
+	private boolean showOutline = true;
 	private boolean showTriangles = false;
 	private boolean showMidpoints = false;
 	private boolean showChordalAxis = false;
+	private boolean showRaisedAxis = false;
+	private boolean showMesh = false;
+	
+	private boolean showPruned = false;
 	private boolean showAxes = true;
 
 	public Canvas3D(Composite parent, int style, SketchModel model)
@@ -169,10 +174,15 @@ public class Canvas3D extends Composite implements Runnable
 		GL11.glEnable(GL11.GL_LINE_SMOOTH);
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 
+		
 		if (showAxes)
 			drawAxes();
 		drawPlane();
-		drawModel();
+		if(showOutline)
+		{
+			drawOutline();
+			drawPoints();
+		}
 		if (showTriangles)
 			drawTriangles();
 		if (showMidpoints)
@@ -182,7 +192,7 @@ public class Canvas3D extends Composite implements Runnable
 
 	}
 	
-	private void drawModel()
+	private void drawOutline()
 	{
 		List<TriangulationPoint> points = model.getPoints();
 		GL11.glLineWidth(3.0f);
@@ -198,6 +208,12 @@ public class Canvas3D extends Composite implements Runnable
 		}
 		GL11.glEnd();
 
+		
+	}
+	
+	private void drawPoints()
+	{
+		List<TriangulationPoint> points = model.getPoints();
 		GL11.glColor3d(0.6, 0.2, 0.3);
 		GL11.glLineWidth(2.0f);
 		for (TriangulationPoint point : points)
@@ -208,7 +224,11 @@ public class Canvas3D extends Composite implements Runnable
 
 	private void drawTriangles()
 	{
-		List<DelaunayTriangle> triangles = model.getTriangles();
+		List<DelaunayTriangle> triangles;
+		if(showPruned)
+			triangles = model.getPrunedTriangles();
+		else
+			triangles = model.getTriangles();
 		if (triangles == null)
 			return;
 		GL11.glLineWidth(1.0f);
@@ -226,8 +246,6 @@ public class Canvas3D extends Composite implements Runnable
 					triangle.points[0].getY(), 0.0);
 			GL11.glEnd();
 		}
-		System.out.println(triangles.size());
-
 	}
 
 	private void drawMidpoints()
@@ -319,8 +337,37 @@ public class Canvas3D extends Composite implements Runnable
 			GL11.glVertex3d(TICK_EXTRUSION, i * TICK_SIZE, -0.01 / zoom);
 		}
 		GL11.glEnd();
+		drawGrid();
+	}
+	
+	private void drawGrid()
+	{
+		GL11.glLineWidth(0.1f);
+		GL11.glColor3d(0.7, 0.7, 0.7);
+		GL11.glBegin(GL11.GL_LINES);
+		int ticks = AXIS_LENGTH / TICK_SIZE;
+		for (int i = 1; i < ticks; i++)
+		{
+			GL11.glVertex3d(-i * TICK_SIZE, -AXIS_LENGTH, -0.01 / zoom);
+			GL11.glVertex3d(-i * TICK_SIZE, AXIS_LENGTH, -0.01 / zoom);
+			
+			GL11.glVertex3d(i * TICK_SIZE, -AXIS_LENGTH, -0.01 / zoom);
+			GL11.glVertex3d(i * TICK_SIZE, AXIS_LENGTH, -0.01 / zoom);
+			
+			GL11.glVertex3d(-AXIS_LENGTH, i * TICK_SIZE, -0.01 / zoom);
+			GL11.glVertex3d(AXIS_LENGTH, i * TICK_SIZE, -0.01 / zoom);
+			
+			GL11.glVertex3d(-AXIS_LENGTH, -i * TICK_SIZE, -0.01 / zoom);
+			GL11.glVertex3d(AXIS_LENGTH, -i * TICK_SIZE, -0.01 / zoom);
+		}
+		GL11.glEnd();
 	}
 
+	public void showOutline(boolean show)
+	{
+		this.showOutline = show;
+	}
+	
 	public void showAxis(boolean show)
 	{
 		this.showAxes = show;
@@ -340,6 +387,21 @@ public class Canvas3D extends Composite implements Runnable
 	{
 		this.showChordalAxis = show;
 	}
+	
+	public void showPruned(boolean pruned)
+	{
+		this.showPruned = pruned;
+	}
+	
+	public void showRaisedAxis(boolean show)
+	{
+		this.showRaisedAxis = show;
+	}
+	
+	public void showMesh(boolean show)
+	{
+		this.showMesh = show;
+	}
 
 	public boolean axesShown()
 	{
@@ -355,6 +417,11 @@ public class Canvas3D extends Composite implements Runnable
 	{
 		return zoom;
 	}
+	
+	public boolean outlineShown()
+	{
+		return showOutline;
+	}
 
 	public boolean trianglesShown()
 	{
@@ -369,6 +436,21 @@ public class Canvas3D extends Composite implements Runnable
 	public boolean chordalAxisShown()
 	{
 		return showChordalAxis;
+	}
+	
+	public boolean prunedShown()
+	{
+		return showPruned;
+	}
+	
+	public boolean raiseAxisShown()
+	{
+		return showRaisedAxis;
+	}
+	
+	public boolean meshShown()
+	{
+		return showMesh;
 	}
 
 }
