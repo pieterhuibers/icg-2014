@@ -1,5 +1,7 @@
 package util;
 
+import org.poly2tri.triangulation.TriangulationPoint;
+
 
 public class Util
 {
@@ -114,5 +116,20 @@ public class Util
 		if(heading < 0)
 			return 360 + heading;
 		return heading;
+	}
+	
+	
+
+	public static double THRESHOLD = 0.0000001;
+
+	public static double distance(TriangulationPoint p1, TriangulationPoint p2)
+	{
+		if(p1==null || p2==null)
+		{
+			System.err.println("Measuring distance between null point(s)");
+			return Double.MAX_VALUE;
+		}
+		return Math.sqrt((p1.getX() - p2.getX()) * (p1.getX() - p2.getX())
+				+ (p1.getY() - p2.getY()) * (p1.getY() - p2.getY()));
 	}
 }

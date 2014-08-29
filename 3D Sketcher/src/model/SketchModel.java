@@ -1,7 +1,6 @@
 package model;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.poly2tri.Poly2Tri;
@@ -9,8 +8,9 @@ import org.poly2tri.geometry.polygon.Polygon;
 import org.poly2tri.geometry.polygon.PolygonPoint;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
-import org.poly2tri.triangulation.delaunay.sweep.DTSweepConstraint;
 import org.poly2tri.triangulation.util.Tuple2;
+
+import util.Util;
 
 public class SketchModel
 {
@@ -26,7 +26,24 @@ public class SketchModel
 	private ChordalAxis chordalAxis;
 	private List<DelaunayTriangle> prunedTriangles;
 	private ChordalAxis prunedChordalAxis;
-
+	
+//	private int terminalIndex = 0;
+	private boolean switchToNewTerminal = true;
+	private DelaunayTriangle currentPruningTerminal;
+	private DelaunayTriangle previousPruningTriangle;
+	private DelaunayTriangle currentPruningTriangle;
+	private boolean removeTriangle = true;
+	
+	private DelaunayTriangle pruningTerminal;
+//	private DelaunayTriangle previousPruningTriangle;
+//	private DelaunayTriangle currentPruningTriangle;
+	private boolean pruningFinishedOnThisTerminal = false;
+	private ArrayList<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
+	
+	private TriangulationPoint pruneEdgePoint1, pruneEdgePoint2;
+	private TriangulationPoint circleCenter;
+	private double circleRadius;
+	
 	public SketchModel()
 	{
 		s = new ArrayList<DelaunayTriangle>();
@@ -55,6 +72,24 @@ public class SketchModel
 			base.addPoints(points);
 		}
 	}
+	
+	public void resetPruning()
+	{
+		prunedTriangles.clear();
+		prunedChordalAxis = chordalAxis.clone();
+		pointsToCheck.clear();
+		pruningFinishedOnThisTerminal = false;
+		pruned = false;
+		
+		pruningTerminal = null;
+		currentPruningTriangle = null;
+		previousPruningTriangle = null;
+		pruneEdgePoint1 = null;
+		pruneEdgePoint2 = null;
+		circleCenter = null;
+		circleRadius = 0.0;
+		copyTriangles();
+	}
 
 	public void clear()
 	{
@@ -70,7 +105,17 @@ public class SketchModel
 		chordalAxis = null;
 		prunedChordalAxis = null;
 		considered.clear();
+		pointsToCheck.clear();
+		pruningFinishedOnThisTerminal = false;
 		pruned = false;
+		
+		pruningTerminal = null;
+		currentPruningTriangle = null;
+		previousPruningTriangle = null;
+		pruneEdgePoint1 = null;
+		pruneEdgePoint2 = null;
+		circleCenter = null;
+		circleRadius = 0.0;
 	}
 
 	public void close()
@@ -85,7 +130,259 @@ public class SketchModel
 		copyTriangles();
 		this.calculateTriangleTypes();
 		this.calculateChordalAxis();
-		this.prune();
+		this.prunedChordalAxis = this.chordalAxis.clone();
+		this.pruningTerminal = t.get(0);
+		this.currentPruningTriangle = t.get(0);
+	}
+	
+	public void prune()
+	{
+		while(!pruned)
+		{
+			pruneStep();
+		}
+	}
+	
+	public void step()
+	{
+		if(pruned)
+		{
+			circleCenter = null;
+			return;
+		}
+		if(switchToNewTerminal)
+		{
+			switchTerminal();
+		}
+		if(removeTriangle)
+		{
+			if(isTerminal(previousPruningTriangle))
+			{
+				pruneTerminal(previousPruningTriangle);
+			}
+			else if(isSleeve(previousPruningTriangle))
+			{
+				pruneSleeve(previousPruningTriangle);
+			}
+		}
+		determineNextCircle();
+		
+	}
+	
+	private boolean isTerminal(DelaunayTriangle triangle)
+	{
+		return t.contains(triangle);
+	}
+	
+	private boolean isSleeve(DelaunayTriangle triangle)
+	{
+		return s.contains(triangle);
+	}
+	
+	private boolean isJunction(DelaunayTriangle triangle)
+	{
+		return j.contains(triangle);
+	}
+	
+	private void switchTerminal()
+	{
+		switchToNewTerminal = false;
+		previousPruningTriangle = null;
+		boolean lastTerminal = (t.size()-1) == (t.indexOf(currentPruningTerminal));
+		if(lastTerminal)
+		{
+			pruned = true;
+			return;
+		}
+		else
+		{
+			currentPruningTerminal = t.get(t.indexOf(currentPruningTerminal)+1);
+			currentPruningTriangle = currentPruningTerminal;
+		}
+	}
+	
+	private void determineNextCircle()
+	{
+		Tuple2<TriangulationPoint, TriangulationPoint> edge;
+		DelaunayTriangle next = getNextTriangle(currentPruningTriangle,previousPruningTriangle);
+		if(isJunction(currentPruningTriangle))
+		{
+			switchToNewTerminal = true;
+			step();
+			return;
+		}
+		else if(isTerminal(currentPruningTriangle))
+		{
+			TriangulationPoint external = findExternalPoint(currentPruningTriangle);
+			edge = findRemainingPoints(currentPruningTriangle, external);
+			pointsToCheck.add(external);
+		}
+		else	//sleeve
+		{
+			edge = getSharedEdge(currentPruningTriangle, next);
+		}
+			
+		circleCenter = calculateMidpoint(edge.a, edge.b);
+		circleRadius = Util.distance(edge.a, edge.b)/2.0;
+		pruneEdgePoint1 = edge.a;
+		pruneEdgePoint2 = edge.b;
+		previousPruningTriangle = currentPruningTriangle;
+		currentPruningTriangle = next;
+		
+		removeTriangle = allPointsInsideRadius(circleCenter, circleRadius, pointsToCheck);
+		if(!removeTriangle)
+		{
+			switchToNewTerminal = true;
+		}
+	}
+	
+	private void pruneTerminal(DelaunayTriangle terminal)
+	{
+		prunedTriangles.remove(terminal);
+	}
+	
+	private void pruneSleeve(DelaunayTriangle sleeve)
+	{
+		prunedTriangles.remove(sleeve);
+	}
+	
+	private void pruneIntoJunction(DelaunayTriangle junction)
+	{
+		
+	}
+	
+	public void pruneStep()
+	{
+		if(pruned)
+			return;
+		//Prune one step
+		if(pruningFinishedOnThisTerminal)
+		{
+			if(currentPruningTriangle!=pruningTerminal)
+			{
+				DelaunayTriangle next = getNextTriangle(currentPruningTriangle,previousPruningTriangle);
+				Tuple2<TriangulationPoint, TriangulationPoint> previousEdge = getSharedEdge(next,currentPruningTriangle);
+				fanOut(next, previousEdge.a, previousEdge.b, pointsToCheck);
+			}
+			int index = t.indexOf(pruningTerminal);
+			if(index + 1 <t.size())
+			{
+				pruningTerminal = t.get(index+1);
+				currentPruningTriangle = t.get(index+1);
+				previousPruningTriangle = null;
+				pruningFinishedOnThisTerminal = false;
+				pointsToCheck.clear();
+				pruneStep();
+			}
+			else
+			{
+				circleCenter = null;
+				pruned = true;
+			}
+		}
+		else
+		{
+			if(!t.contains(currentPruningTriangle))
+			{
+				prunedTriangles.remove(currentPruningTriangle);
+				if(previousPruningTriangle!=null)
+				{
+					Tuple2<TriangulationPoint, TriangulationPoint> previousEdge = getSharedEdge(currentPruningTriangle,previousPruningTriangle);
+					TriangulationPoint midPoint = calculateMidpoint(previousEdge.a, previousEdge.b);
+					prunedChordalAxis.removePoint(midPoint);
+				}
+			}
+			if(t.contains(currentPruningTriangle))
+			{
+				TriangulationPoint external = findExternalPoint(currentPruningTriangle);
+				Tuple2<TriangulationPoint, TriangulationPoint> remaining = findRemainingPoints(currentPruningTriangle, external);
+				pointsToCheck.add(external);
+				circleCenter = calculateMidpoint(remaining.a, remaining.b);
+				circleRadius = Util.distance(remaining.a, remaining.b)/2.0;
+				pruneEdgePoint1 = remaining.a;
+				pruneEdgePoint2 = remaining.b;
+			}
+			else if(j.contains(currentPruningTriangle))
+			{
+				//stop
+				prunedTriangles.remove(currentPruningTriangle);
+				
+				j.remove(currentPruningTriangle);
+				DelaunayTriangle neighbour1 = null;
+				DelaunayTriangle neighbour2 = null;
+				for (int i = 0; i < currentPruningTriangle.neighbors.length; i++)
+				{
+					if(currentPruningTriangle.neighbors[i]!=previousPruningTriangle)
+					{
+						if(neighbour1==null)
+							neighbour1 = currentPruningTriangle.neighbors[i];
+						else
+							neighbour2 = currentPruningTriangle.neighbors[i];
+					}
+				}
+				
+				Tuple2<TriangulationPoint, TriangulationPoint> previousEdge = getSharedEdge(currentPruningTriangle,previousPruningTriangle);
+				Tuple2<TriangulationPoint, TriangulationPoint> edge1 = getSharedEdge(currentPruningTriangle,neighbour1);
+				Tuple2<TriangulationPoint, TriangulationPoint> edge2 = getSharedEdge(currentPruningTriangle,neighbour2);
+				
+				TriangulationPoint midPoint = calculateMidpoint(previousEdge.a, previousEdge.b);
+				prunedChordalAxis.removePoint(midPoint);
+				
+				TriangulationPoint center = currentPruningTriangle.centroid();
+				fanOut(center, previousEdge.a, previousEdge.b, pointsToCheck);
+				DelaunayTriangle new1 = new DelaunayTriangle(center, edge1.a, edge1.b);
+				DelaunayTriangle new2 = new DelaunayTriangle(center, edge2.a, edge2.b);
+				prunedTriangles.add(new1);
+				prunedTriangles.add(new2);
+				
+				
+				pruningFinishedOnThisTerminal = true;
+				currentPruningTriangle = pruningTerminal; //To prevent algorithm from fanning out again
+				pruneStep();
+			}
+			else
+			{
+				DelaunayTriangle next = getNextTriangle(currentPruningTriangle,previousPruningTriangle);
+				TriangulationPoint shared = getSharedPoint(previousPruningTriangle, currentPruningTriangle , next);
+				for(int i=0; i<3; i++)
+				{
+					if(Util.distance(currentPruningTriangle.points[i],shared) > 0.05 && !pointsToCheck.contains(currentPruningTriangle.points[i]))
+						pointsToCheck.add(currentPruningTriangle.points[i]);
+				}
+				Tuple2<TriangulationPoint, TriangulationPoint> edge = getSharedEdge(currentPruningTriangle,next);
+				circleCenter = calculateMidpoint(edge.a, edge.b);
+				circleRadius = Util.distance(edge.a, edge.b)/2.0;
+				pruneEdgePoint1 = edge.a;
+				pruneEdgePoint2 = edge.b;
+			}
+			if(allPointsInsideRadius(circleCenter, circleRadius, pointsToCheck))
+			{
+				prunedTriangles.remove(currentPruningTriangle);
+				if(previousPruningTriangle!=null)
+				{
+					Tuple2<TriangulationPoint, TriangulationPoint> previousEdge = getSharedEdge(currentPruningTriangle,previousPruningTriangle);
+					TriangulationPoint midPoint = calculateMidpoint(previousEdge.a, previousEdge.b);
+					prunedChordalAxis.removePoint(midPoint);
+				}
+				DelaunayTriangle next = getNextTriangle(currentPruningTriangle,previousPruningTriangle);
+				previousPruningTriangle = currentPruningTriangle;
+				currentPruningTriangle = next;
+			}
+			else
+			{
+				pruningFinishedOnThisTerminal = true;
+			}
+		}
+	}
+	
+	private boolean allPointsInsideRadius(TriangulationPoint center, double radius, List<TriangulationPoint> points)
+	{
+		for (TriangulationPoint point : points)
+		{
+			if(Util.distance(center, point) > radius)
+				return false;
+		}
+		return true;
 	}
 	
 	private void copyTriangles()
@@ -253,7 +550,7 @@ public class SketchModel
 		else if(s.contains(neighbour))
 		{
 			ChordalAxisPoint newPoint;
-			if(distance(current.getPoint(), midpoints[0]) > 0.005)
+			if(Util.distance(current.getPoint(), midpoints[0]) > Util.THRESHOLD)
 			{
 				newPoint = new ChordalAxisPoint(midpoints[0]);
 			}
@@ -278,7 +575,7 @@ public class SketchModel
 			int index2 = -1;
 			for (int i = 0; i < 3; i++)
 			{
-				if(distance(current.getPoint(), midpoints[i]) > 0.005)
+				if(Util.distance(current.getPoint(), midpoints[i]) > Util.THRESHOLD)
 				{
 					if(index1 == -1)
 						index1 = i;
@@ -297,7 +594,7 @@ public class SketchModel
 			TriangulationPoint[] neighbour1Midpoints = getMidPoints(neighbours[0]);
 			for (int i = 0; i < neighbour1Midpoints.length; i++)
 			{
-				if(distance(newPoint1.getPoint(),neighbour1Midpoints[i]) < 0.005)
+				if(Util.distance(newPoint1.getPoint(),neighbour1Midpoints[i]) < Util.THRESHOLD)
 					connectNeighbour1ToMidpoint1 = true;
 			}
 			if(connectNeighbour1ToMidpoint1)
@@ -342,73 +639,59 @@ public class SketchModel
 		{
 			TriangulationPoint p1base = points.get(i);
 			TriangulationPoint p2base = points.get((i + 1) % size);
-			if ((distance(p1base, p1) < 0.005 && distance(p2base, p2) < 0.005)
-					|| (distance(p1base, p2) < 0.005 && distance(p2base, p1) < 0.005))
+			if ((Util.distance(p1base, p1) < Util.THRESHOLD && Util.distance(p2base, p2) < Util.THRESHOLD)
+					|| (Util.distance(p1base, p2) < Util.THRESHOLD && Util.distance(p2base, p1) < Util.THRESHOLD))
 				return false;
 		}
 
 		return true;
 	}
 
-	private double distance(TriangulationPoint p1, TriangulationPoint p2)
-	{
-		return Math.sqrt((p1.getX() - p2.getX()) * (p1.getX() - p2.getX())
-				+ (p1.getY() - p2.getY()) * (p1.getY() - p2.getY()));
-	}
-
-	private void prune()
-	{
-		for (DelaunayTriangle terminal : t)
-		{
-			pruneFromTerminal(terminal);
-		}
-	}
+//	private void pruneFromTerminal(DelaunayTriangle terminal)
+//	{
+//		TriangulationPoint external = findExternalPoint(terminal);
+//		Tuple2<TriangulationPoint, TriangulationPoint> remaining = findRemainingPoints(terminal, external);
+//		ArrayList<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
+//		pointsToCheck.add(external);
+//		prune(terminal, remaining.a, remaining.b, pointsToCheck, null);
+//	}
 	
-	private void pruneFromTerminal(DelaunayTriangle terminal)
-	{
-		TriangulationPoint external = findExternalPoint(terminal);
-		Tuple2<TriangulationPoint, TriangulationPoint> remaining = findRemainingPoints(terminal, external);
-		ArrayList<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
-		pointsToCheck.add(external);
-		prune(terminal, remaining.a, remaining.b, pointsToCheck, null);
-	}
-	
-	private void prune(DelaunayTriangle triangle, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> pointsToCheck, DelaunayTriangle previousTriangle)
-	{
-		TriangulationPoint midpoint = calculateMidpoint(a,b);
-		double radius = distance(midpoint, a);
-		boolean prune = true;
-		for (TriangulationPoint point : pointsToCheck)
-		{
-			if(distance(midpoint, point) > radius)
-			{
-				prune = false;
-				break;
-			}
-		}
-		if(j.contains(triangle))
-		{
-			prune = false;
-		}
-		if(prune)
-		{
-			prunedTriangles.remove(triangle);	
-			DelaunayTriangle next = getNextTriangle(triangle,previousTriangle);
-			DelaunayTriangle nextNext = getNextTriangle(next,triangle);
-			TriangulationPoint shared = getSharedPoint(triangle, next, nextNext);
-			for(int i=0; i<3; i++)
-			{
-				if(distance(triangle.points[i],shared) > 0.05 && !pointsToCheck.contains(triangle.points[i]))
-					pointsToCheck.add(triangle.points[i]);
-			}
-			Tuple2<TriangulationPoint, TriangulationPoint> edge = getSharedEdge(next,nextNext);
-			prune(next,edge.a,edge.b, pointsToCheck, triangle);
-		}
-		else
-		{
-			fanOut(triangle, a, b, pointsToCheck);
-		}
-	}
+//	private void prune(DelaunayTriangle triangle, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> pointsToCheck, DelaunayTriangle previousTriangle)
+//	{
+//		TriangulationPoint midpoint = calculateMidpoint(a,b);
+//		double radius = Util.distance(midpoint, a);
+//		boolean prune = true;
+//		for (TriangulationPoint point : pointsToCheck)
+//		{
+//			if(Util.distance(midpoint, point) > radius)
+//			{
+//				prune = false;
+//				break;
+//			}
+//		}
+//		if(j.contains(triangle))
+//		{
+//			prune = false;
+//		}
+//		if(prune)
+//		{
+//			prunedTriangles.remove(triangle);	
+//			DelaunayTriangle next = getNextTriangle(triangle,previousTriangle);
+//			DelaunayTriangle nextNext = getNextTriangle(next,triangle);
+//			TriangulationPoint shared = getSharedPoint(triangle, next, nextNext);
+//			for(int i=0; i<3; i++)
+//			{
+//				if(Util.distance(triangle.points[i],shared) > 0.05 && !pointsToCheck.contains(triangle.points[i]))
+//					pointsToCheck.add(triangle.points[i]);
+//			}
+//			Tuple2<TriangulationPoint, TriangulationPoint> edge = getSharedEdge(next,nextNext);
+//			prune(next,edge.a,edge.b, pointsToCheck, triangle);
+//		}
+//		else
+//		{
+//			fanOut(triangle, a, b, pointsToCheck);
+//		}
+//	}
 	
 	private TriangulationPoint getSharedPoint(DelaunayTriangle triangle1, DelaunayTriangle triangle2, DelaunayTriangle triangle3)
 	{
@@ -424,7 +707,7 @@ public class SketchModel
 	{
 		for (int i = 0; i < triangle.points.length; i++)
 		{
-			if(distance(triangle.points[i], point) < 0.005)
+			if(Util.distance(triangle.points[i], point) < Util.THRESHOLD)
 				return true;
 		}
 		return false;
@@ -439,7 +722,7 @@ public class SketchModel
 		{
 			next = neighbours[0];
 		}
-		else if(neighbours.length==1)
+		else if(neighbours.length==2)
 		{
 			if(neighbours[0]==previous)
 				next = neighbours[1];
@@ -449,20 +732,26 @@ public class SketchModel
 		else
 		{
 			//No problem, current triangle will not be pruned since it is a junction triangle
+			System.err.println("Junction triangle should not be pruned");
 			next = neighbours[0];
 		}
 		return next;
 	}
 	
-	private void fanOut(DelaunayTriangle triangle, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> points)
+	private void fanOut(TriangulationPoint midpoint, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> points)
 	{
-		TriangulationPoint midpoint = calculateMidpoint(a,b);
 		List<TriangulationPoint> fanPoints = getIntermediatePoints(a, b);
 		for (int i = 0; i < fanPoints.size()-1; i++)
 		{
 			DelaunayTriangle fanTriangle = new DelaunayTriangle(midpoint, fanPoints.get(i), fanPoints.get(i+1));
 			prunedTriangles.add(fanTriangle);
 		}
+	}
+	
+	private void fanOut(DelaunayTriangle triangle, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> points)
+	{
+		TriangulationPoint midpoint = calculateMidpoint(a,b);
+		fanOut(midpoint,a,b,points);
 	}
 	
 	private List<TriangulationPoint> getIntermediatePoints(TriangulationPoint start, TriangulationPoint end)
@@ -535,14 +824,14 @@ public class SketchModel
 		
 		for (int i = 0; i < p2.length; i++)
 		{
-			if(distance(p1[0], p2[i])<0.005)
+			if(Util.distance(p1[0], p2[i])<Util.THRESHOLD)
 			{
 				result.a = p1[0];
 			}
 		}
 		for (int i = 0; i < p2.length; i++)
 		{
-			if(distance(p1[1], p2[i])<0.005)
+			if(Util.distance(p1[1], p2[i])<Util.THRESHOLD)
 			{
 				if(result.a==null)
 					result.a = p1[1];
@@ -552,7 +841,7 @@ public class SketchModel
 		}
 		for (int i = 0; i < p2.length; i++)
 		{
-			if(distance(p1[2], p2[i])<0.005)
+			if(Util.distance(p1[2], p2[i])<Util.THRESHOLD)
 			{
 				result.b = p1[2];
 			}
@@ -635,6 +924,14 @@ public class SketchModel
 		else
 			return null;
 	}
+	
+	public List<TriangulationPoint> getPrunedChordalAxisPoints()
+	{
+		if(prunedChordalAxis!=null)
+			return prunedChordalAxis.getAllPoints();
+		else
+			return null;
+	}
 
 	public boolean isClosed()
 	{
@@ -644,5 +941,25 @@ public class SketchModel
 	public boolean isPruned()
 	{
 		return pruned;
+	}
+	
+	public TriangulationPoint getCircleCenter()
+	{
+		return circleCenter;
+	}
+	
+	public double getCircleRadius()
+	{
+		return circleRadius;
+	}
+	
+	public TriangulationPoint getPruneEdgePoint1()
+	{
+		return pruneEdgePoint1;
+	}
+	
+	public TriangulationPoint getPruneEdgePoint2()
+	{
+		return pruneEdgePoint2;
 	}
 }

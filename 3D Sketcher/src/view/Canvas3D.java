@@ -22,6 +22,7 @@ import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
 
 import util.DrawShape;
+import util.Util;
 import control.CanvasListener;
 
 public class Canvas3D extends Composite implements Runnable
@@ -183,12 +184,14 @@ public class Canvas3D extends Composite implements Runnable
 			drawOutline();
 			drawPoints();
 		}
+		drawPruningCircle();
 		if (showTriangles)
 			drawTriangles();
 		if (showMidpoints)
 			drawMidpoints();
 		if (showChordalAxis)
 			drawChordalAxis();
+		
 
 	}
 	
@@ -207,8 +210,23 @@ public class Canvas3D extends Composite implements Runnable
 			GL11.glVertex3d(points.get(0).getX(), points.get(0).getY(), 0.0);
 		}
 		GL11.glEnd();
-
-		
+	}
+	
+	private void drawPruningCircle()
+	{
+		TriangulationPoint center = model.getCircleCenter();
+		TriangulationPoint p1 = model.getPruneEdgePoint1();
+		TriangulationPoint p2 = model.getPruneEdgePoint2();
+		double radius = model.getCircleRadius();
+		if(center!=null)
+		{
+			GL11.glLineWidth(2);
+			GL11.glColor3f(.6f, .2f, .2f);
+			DrawShape.sphere(center.getX(), center.getY(), 0.0, 0.02);
+			DrawShape.circle(center.getX(), center.getY(), 0.0, radius, 50);
+			GL11.glColor3f(.1f, .8f, .8f);
+			DrawShape.line(p1.getX(), p1.getY(), p1.getZ(), p2.getX(), p2.getY(), p2.getZ());
+		}
 	}
 	
 	private void drawPoints()
@@ -254,7 +272,11 @@ public class Canvas3D extends Composite implements Runnable
 			return;
 		GL11.glLineWidth(2.0f);
 		GL11.glColor3d(0.6, 0.2, 0.3);
-		List<TriangulationPoint> points = model.getChordalAxisPoints();
+		List<TriangulationPoint> points;
+		if(!showPruned)
+			points = model.getChordalAxisPoints();
+		else
+			points = model.getPrunedChordalAxisPoints();
 		for (TriangulationPoint midpoint : points)
 		{
 			DrawShape.sphere(midpoint.getX(), midpoint.getY(), 0.0, 0.02);
@@ -265,7 +287,11 @@ public class Canvas3D extends Composite implements Runnable
 	{
 		if(model.getChordalAxis()==null)
 			return;
-		ChordalAxisPoint start = model.getChordalAxis().getStartPoint();
+		ChordalAxisPoint start;
+		if(!showPruned)
+			start = model.getChordalAxis().getStartPoint();
+		else
+			start = model.getPrunedChordalAxis().getStartPoint();
 		
 		GL11.glLineWidth(5.0f);
 		GL11.glBegin(GL11.GL_LINE_STRIP);

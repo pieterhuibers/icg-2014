@@ -315,4 +315,6 @@ public final class Vector3D
 		this.normalize();
 		this.multiply(length);
 	}
+	
+	
 }

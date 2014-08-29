@@ -7,17 +7,20 @@ import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.widgets.Button;
 
 import view.Canvas3D;
+import view.SketchWindow;
 
 public class ButtonListener implements SelectionListener
 {
 	private SketchModel model;
 	private Canvas3D canvas;
+	private SketchWindow window;
 	
-	public ButtonListener(SketchModel model, Canvas3D canvas)
+	public ButtonListener(SketchModel model, Canvas3D canvas, SketchWindow window)
 	{
 		super();
 		this.model = model;
 		this.canvas = canvas;
+		this.window = window;
 	}
 
 	@Override
@@ -33,6 +36,7 @@ public class ButtonListener implements SelectionListener
 		Button b = (Button)(e.getSource());
 		if(b.getText().equals("Clear"))
 		{
+			window.resetPruningButtons();
 			model.clear();
 		}
 		else if(b.getText().equals("Outline"))
@@ -55,10 +59,34 @@ public class ButtonListener implements SelectionListener
 			boolean chordalAxisShown = canvas.chordalAxisShown();
 			canvas.showChordalAxis(!chordalAxisShown);			
 		}
+		else if(b.getText().equals("Prune Step"))
+		{
+			window.setShowPrunedButton(false);
+			canvas.showTriangles(true);
+			canvas.showPruned(true);
+			//model.pruneStep();
+			model.step();
+			if(model.isPruned())
+				b.setEnabled(false);
+		}
+		else if(b.getText().equals("Prune All"))
+		{
+			window.setShowPrunedButton(false);
+			canvas.showTriangles(true);
+			canvas.showPruned(true);
+			if(!model.isPruned())
+				model.prune();
+			b.setEnabled(false);
+		}
 		else if(b.getText().equals("Pruned"))
 		{
-			boolean prunedShown = canvas.prunedShown();
-			canvas.showPruned(!prunedShown);			
+			b.setText("Unpruned");
+			canvas.showPruned(true);			
+		}
+		else if(b.getText().equals("Unpruned"))
+		{
+			b.setText("Pruned");
+			canvas.showPruned(false);			
 		}
 		else if(b.getText().equals("Raised"))
 		{
@@ -78,6 +106,11 @@ public class ButtonListener implements SelectionListener
 		else if(b.getText().equals("Reset Camera"))
 		{
 			canvas.getCamera().reset();
+		}
+		else if(b.getText().equals("Reset Pruning"))
+		{
+			model.resetPruning();
+			window.resetPruningButtons();
 		}
 	}
 

@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.poly2tri.triangulation.TriangulationPoint;
 
+import util.Util;
+
 public class ChordalAxisPoint
 {
 	private TriangulationPoint point;
@@ -25,13 +27,15 @@ public class ChordalAxisPoint
 	public void setOutgoing1(ChordalAxisPoint outgoing1)
 	{
 		this.outgoing1 = outgoing1;
-		this.outgoing1.setIncoming(this);
+		if(this.outgoing1!=null)
+			this.outgoing1.setIncoming(this);
 	}
 	
 	public void setOutgoing2(ChordalAxisPoint outgoing2)
 	{
 		this.outgoing2 = outgoing2;
-		this.outgoing2.setIncoming(this);
+		if(this.outgoing2!=null)
+			this.outgoing2.setIncoming(this);
 	}
 	
 	public List<TriangulationPoint> getNextPoints()
@@ -43,6 +47,44 @@ public class ChordalAxisPoint
 		if(outgoing2!=null)
 			points.addAll(outgoing2.getNextPoints());
 		return points;
+	}
+	
+	public void removePoint(ChordalAxisPoint point)
+	{
+		if(this==point)
+		{
+			if(incoming!=null)
+			{
+				incoming.setOutgoing1(outgoing1);
+				incoming.setOutgoing1(outgoing2);
+			}
+		}
+		else
+		{
+			if(outgoing1!=null)
+				outgoing1.removePoint(point);
+			if(outgoing2!=null)
+				outgoing2.removePoint(point);
+		}
+	}
+	
+	public void removePoint(TriangulationPoint point)
+	{
+		if(Util.distance(this.point, point)<Util.THRESHOLD)
+		{
+			if(incoming!=null)
+			{
+				incoming.setOutgoing1(outgoing1);
+				incoming.setOutgoing2(outgoing2);
+			}
+		}
+		else
+		{
+			if(outgoing1!=null)
+				outgoing1.removePoint(point);
+			if(outgoing2!=null)
+				outgoing2.removePoint(point);
+		}
 	}
 	
 	public TriangulationPoint getPoint()
@@ -68,5 +110,21 @@ public class ChordalAxisPoint
 	public double getY()
 	{
 		return point.getY();
+	}
+	
+	public ChordalAxisPoint clone()
+	{
+		ChordalAxisPoint clone = new ChordalAxisPoint(point);
+		if(outgoing1!=null)
+		{
+			ChordalAxisPoint out1Clone = outgoing1.clone();
+			clone.setOutgoing1(out1Clone);
+		}
+		if(outgoing2!=null)
+		{
+			ChordalAxisPoint out2Clone = outgoing2.clone();
+			clone.setOutgoing2(out2Clone);
+		}
+		return clone;
 	}
 }
