@@ -64,8 +64,7 @@ public class ButtonListener implements SelectionListener
 			window.setShowPrunedButton(false);
 			canvas.showTriangles(true);
 			canvas.showPruned(true);
-			//model.pruneStep();
-			model.step();
+			model.pruneStep();
 			if(model.isPruned())
 				b.setEnabled(false);
 		}

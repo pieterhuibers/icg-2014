@@ -215,11 +215,11 @@ public class Canvas3D extends Composite implements Runnable
 	private void drawPruningCircle()
 	{
 		TriangulationPoint center = model.getCircleCenter();
-		TriangulationPoint p1 = model.getPruneEdgePoint1();
-		TriangulationPoint p2 = model.getPruneEdgePoint2();
-		double radius = model.getCircleRadius();
 		if(center!=null)
 		{
+			TriangulationPoint p1 = model.getEdgePoint1();
+			TriangulationPoint p2 = model.getEdgePoint2();
+			double radius = model.getCircleRadius();
 			GL11.glLineWidth(2);
 			GL11.glColor3f(.6f, .2f, .2f);
 			DrawShape.sphere(center.getX(), center.getY(), 0.0, 0.02);

@@ -1,6 +1,9 @@
 package util;
 
+import org.poly2tri.geometry.polygon.PolygonPoint;
 import org.poly2tri.triangulation.TriangulationPoint;
+import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
+import org.poly2tri.triangulation.delaunay.sweep.DTSweepConstraint;
 
 
 public class Util
@@ -81,28 +84,6 @@ public class Util
 	}
 	
 	/**
-	 * Calculates the 3D position vector (vector from origin to position) based
-	 * on the platforms latitude, longitude and altitude.
-	 * 
-	 * @param lat
-	 *        the platforms latitude
-	 * @param lon
-	 *        the platforms longitude
-	 * @param alt
-	 *        the platforms altitude
-	 * @return a Vector3D object with x,y,z values corresponding to the
-	 *         latitude, longitude and altitude of the platform
-	 */
-	public static Vector3D toPositionVector(double lat, double lon, double alt)
-	{
-		double x = lat;
-		double y = lon;
-		double z = alt;
-		Vector3D result = new Vector3D(x, y, z);
-		return result;
-	}
-
-	/**
 	 * Normalizes the heading of a plane between 0 and 360.
 	 * 
 	 * @param heading
@@ -131,5 +112,47 @@ public class Util
 		}
 		return Math.sqrt((p1.getX() - p2.getX()) * (p1.getX() - p2.getX())
 				+ (p1.getY() - p2.getY()) * (p1.getY() - p2.getY()));
+	}
+
+	public static TriangulationPoint getMidpoint(TriangulationPoint p1, TriangulationPoint p2)
+	{
+		TriangulationPoint midpoint = new PolygonPoint(
+				(p1.getX() + p2.getX()) / 2.0,
+				(p1.getY() + p2.getY()) / 2.0);
+		return midpoint;
+	}
+
+	public static DTSweepConstraint getSharedEdge(DelaunayTriangle triangle1, DelaunayTriangle triangle2)
+	{
+		DTSweepConstraint result = new DTSweepConstraint(triangle1.points[0], triangle1.points[1]);
+		
+		TriangulationPoint[] p1 = triangle1.points;
+		TriangulationPoint[] p2 = triangle2.points;
+		
+		for (int i = 0; i < p2.length; i++)
+		{
+			if(distance(p1[0], p2[i])<THRESHOLD)
+			{
+				result.p = p1[0];
+			}
+		}
+		for (int i = 0; i < p2.length; i++)
+		{
+			if(distance(p1[1], p2[i])<THRESHOLD)
+			{
+				if(result.p==null)
+					result.p = p1[1];
+				else
+					result.q = p1[1];
+			}
+		}
+		for (int i = 0; i < p2.length; i++)
+		{
+			if(distance(p1[2], p2[i])<THRESHOLD)
+			{
+				result.q = p1[2];
+			}
+		}
+		return result;
 	}
 }
