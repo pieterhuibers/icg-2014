@@ -68,22 +68,24 @@ public class ChordalAxisPoint
 		}
 	}
 	
-	public void removePoint(TriangulationPoint point)
+	public void removePoint(TriangulationPoint point, int out)
 	{
 		if(Util.distance(this.point, point)<Util.THRESHOLD)
 		{
 			if(incoming!=null)
 			{
-				incoming.setOutgoing1(outgoing1);
-				incoming.setOutgoing2(outgoing2);
+				if(out==1)
+					incoming.setOutgoing1(outgoing1);
+				else if(out==2)
+					incoming.setOutgoing2(outgoing1);	//we can only delete a node that has at much 1 outgoing connection
 			}
 		}
 		else
 		{
 			if(outgoing1!=null)
-				outgoing1.removePoint(point);
+				outgoing1.removePoint(point,1);
 			if(outgoing2!=null)
-				outgoing2.removePoint(point);
+				outgoing2.removePoint(point,2);
 		}
 	}
 	

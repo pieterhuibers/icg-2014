@@ -27,24 +27,11 @@ public class SketchModel
 	private List<DelaunayTriangle> prunedTriangles;
 	private ChordalAxis prunedChordalAxis;
 	
-//	private int terminalIndex = 0;
-//	private boolean switchToNewTerminal = true;
-//	private DelaunayTriangle currentPruningTerminal;
-//	private DelaunayTriangle previousPruningTriangle;
-//	private DelaunayTriangle currentPruningTriangle;
-//	private boolean removeTriangle = true;
-	
-	
-//	private DelaunayTriangle previousPruningTriangle;
-//	private DelaunayTriangle currentPruningTriangle;
-//	private boolean pruningFinishedOnThisTerminal = false;
-	
 	private DelaunayTriangle currentTerminal;
 	private DelaunayTriangle currentTriangle;
 	private DTSweepConstraint currentEdge;
 	private ArrayList<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
 	
-//	private TriangulationPoint pruneEdgePoint1, pruneEdgePoint2;
 	private TriangulationPoint circleCenter;
 	private double circleRadius;
 	
@@ -161,6 +148,7 @@ public class SketchModel
 	{
 		prunedTriangles.remove(currentTerminal);
 		TriangulationPoint external = getExternalPoint(currentTerminal);
+		prunedChordalAxis.removePoint(external);
 		currentTriangle = getNextTriangle(currentTerminal, null);
 		currentEdge = getOppositeEdge(currentTerminal, external);
 		updateCircle();
@@ -175,6 +163,8 @@ public class SketchModel
 			if(allPointsInsideRadius(currentEdge, pointsToCheck))
 			{
 				prunedTriangles.remove(currentTriangle);
+				TriangulationPoint midpoint = Util.getMidpoint(currentEdge.p, currentEdge.q);
+				prunedChordalAxis.removePoint(midpoint);
 				pointsToCheck.add(currentEdge.p);
 				pointsToCheck.add(currentEdge.q);
 				DelaunayTriangle nextTriangle = getOppositeTriangle(currentEdge, currentTriangle);
@@ -193,6 +183,8 @@ public class SketchModel
 		else if(isJunction(currentTriangle))
 		{
 			prunedTriangles.remove(currentTriangle);
+			TriangulationPoint midpoint = Util.getMidpoint(currentEdge.p, currentEdge.q);
+			prunedChordalAxis.removePoint(midpoint);
 			TriangulationPoint center = currentTriangle.centroid();
 			fanOut(center, currentEdge.p, currentEdge.q, pointsToCheck);
 			selectNextTerminal();
@@ -324,7 +316,7 @@ public class SketchModel
 	private TriangulationPoint[] getMidPoints(DelaunayTriangle triangle)
 	{
 		TriangulationPoint[] result = null;
-		if(t.contains(triangle))
+		if(isTerminal(triangle))
 		{
 			result = new TriangulationPoint[1];
 			for (int i = 0; i < 3; i++)
@@ -338,7 +330,7 @@ public class SketchModel
 				}
 			}
 		}
-		else if(s.contains(triangle))
+		else if(isSleeve(triangle))
 		{
 			result = new TriangulationPoint[2];
 			int index = 0;
@@ -354,7 +346,7 @@ public class SketchModel
 				}
 			}
 		}
-		else if(j.contains(triangle))
+		else if(isJunction(triangle))
 		{
 			result = new TriangulationPoint[4];
 			int index = 0;
@@ -390,6 +382,11 @@ public class SketchModel
 		growChordalAxis(next,neighbours[0]);
 		chordalAxis = new ChordalAxis(start);
 	}
+	
+//	private void calculatePrunedChordalAxis()
+//	{
+//		
+//	}
 	
 	private TriangulationPoint getExternalPoint(DelaunayTriangle terminal)
 	{
@@ -520,26 +517,6 @@ public class SketchModel
 		}
 
 		return true;
-	}
-	
-	private TriangulationPoint getSharedPoint(DelaunayTriangle triangle1, DelaunayTriangle triangle2, DelaunayTriangle triangle3)
-	{
-		for (int i = 0; i < triangle1.points.length; i++)
-		{
-			if(hasPoint(triangle2, triangle1.points[i]) && hasPoint(triangle2, triangle1.points[i]))
-				return triangle1.points[i];
-		}
-		return null;
-	}
-	
-	private boolean hasPoint(DelaunayTriangle triangle, TriangulationPoint point)
-	{
-		for (int i = 0; i < triangle.points.length; i++)
-		{
-			if(Util.distance(triangle.points[i], point) < Util.THRESHOLD)
-				return true;
-		}
-		return false;
 	}
 	
 	private DelaunayTriangle getOppositeTriangle(DTSweepConstraint edge, DelaunayTriangle current)

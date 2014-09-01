@@ -46,7 +46,7 @@ public class ChordalAxis
 		}
 		else
 		{
-			start.removePoint(point);
+			start.removePoint(point,1);
 		}
 	}
 	
