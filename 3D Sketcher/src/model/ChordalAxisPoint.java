@@ -89,6 +89,24 @@ public class ChordalAxisPoint
 		}
 	}
 	
+	public boolean contains(TriangulationPoint point)
+	{
+		if(Util.distance(this.point, point)<Util.THRESHOLD)
+		{
+			return true;
+		}
+		else
+		{
+			boolean out1Contains = false;
+			boolean out2Contains = false;
+			if(outgoing1!=null)
+				out1Contains = outgoing1.contains(point);
+			if(outgoing2!=null)
+				out2Contains = outgoing2.contains(point);
+			return out1Contains || out2Contains;
+		}
+	}
+	
 	public TriangulationPoint getPoint()
 	{
 		return point;

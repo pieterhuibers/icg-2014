@@ -22,7 +22,6 @@ import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
 
 import util.DrawShape;
-import util.Util;
 import control.CanvasListener;
 
 public class Canvas3D extends Composite implements Runnable
@@ -47,6 +46,7 @@ public class Canvas3D extends Composite implements Runnable
 	private boolean showMesh = false;
 	
 	private boolean showPruned = false;
+	private boolean showSubdivided = false;
 	private boolean showAxes = true;
 
 	public Canvas3D(Composite parent, int style, SketchModel model)
@@ -245,6 +245,8 @@ public class Canvas3D extends Composite implements Runnable
 		List<DelaunayTriangle> triangles;
 		if(showPruned)
 			triangles = model.getPrunedTriangles();
+		else if(showSubdivided)
+			triangles = model.getSubdividedTriangles();
 		else
 			triangles = model.getTriangles();
 		if (triangles == null)
@@ -293,14 +295,19 @@ public class Canvas3D extends Composite implements Runnable
 		else
 			start = model.getPrunedChordalAxis().getStartPoint();
 		
-		GL11.glLineWidth(5.0f);
-		GL11.glBegin(GL11.GL_LINE_STRIP);
-		GL11.glColor3f(.3f, .5f, .3f);
+		
 		drawChordalAxis(start,0.0);
+		if(showRaisedAxis)
+		{
+			drawChordalAxis(start,1.0);
+		}
 	}
 	
 	private void drawChordalAxis(ChordalAxisPoint point, double height)
 	{
+		GL11.glLineWidth(5.0f);
+		GL11.glBegin(GL11.GL_LINE_STRIP);
+		GL11.glColor3f(.3f, .5f, .3f);
 		ChordalAxisPoint o1 = point.getOutgoing1();
 		ChordalAxisPoint o2 = point.getOutgoing2();
 		if(o1==null && o2==null)	//terminal point
@@ -318,7 +325,7 @@ public class Canvas3D extends Composite implements Runnable
 			GL11.glVertex3d(point.getX(), point.getY(), height);
 			drawChordalAxis(o1,height);
 			GL11.glBegin(GL11.GL_LINE_STRIP);
-			GL11.glVertex3d(point.getX(), point.getY(), 0.0);
+			GL11.glVertex3d(point.getX(), point.getY(), height);
 			drawChordalAxis(o2,height);
 		}
 	}
@@ -414,9 +421,10 @@ public class Canvas3D extends Composite implements Runnable
 		this.showChordalAxis = show;
 	}
 	
-	public void showPruned(boolean pruned)
+	public void showPruned(boolean show)
 	{
-		this.showPruned = pruned;
+		this.showPruned = show;
+		this.showSubdivided = !show;
 	}
 	
 	public void showRaisedAxis(boolean show)
@@ -427,6 +435,12 @@ public class Canvas3D extends Composite implements Runnable
 	public void showMesh(boolean show)
 	{
 		this.showMesh = show;
+	}
+	
+	public void showSubdivided(boolean show)
+	{
+		this.showPruned = !show;
+		this.showSubdivided = show;
 	}
 
 	public boolean axesShown()
@@ -477,6 +491,11 @@ public class Canvas3D extends Composite implements Runnable
 	public boolean meshShown()
 	{
 		return showMesh;
+	}
+	
+	public boolean subdivisionShown()
+	{
+		return showSubdivided;
 	}
 
 }

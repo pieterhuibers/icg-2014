@@ -12,13 +12,13 @@ import control.ButtonListener;
 
 public class SketchWindow extends Composite
 {
-	private static final int DEFAULT_WIDTH = 800;
+	private static final int DEFAULT_WIDTH = 810;
 	private static final int DEFAULT_HEIGHT = 640;
 	
 	private Canvas3D canvas;
 	private SketchModel model;
 	
-	private Button clear, outline, triangles, midpoints, chordal, pruneStep, pruneAll, pruned, raised, mesh, axes, resetCamera, resetPruning;
+	private Button clear, outline, triangles, midpoints, chordal, pruneStep, pruneAll, pruned, subdivide, raised, mesh, axes, resetCamera, resetPruning;
 	
 	public SketchWindow(Composite parent, int style)
 	{
@@ -67,6 +67,10 @@ public class SketchWindow extends Composite
 		pruned.setText("Pruned");
 		pruned.addSelectionListener(buttonListener);
 		
+		subdivide = new Button(this, SWT.NONE);
+		subdivide.setText("Subdivide");
+		subdivide.addSelectionListener(buttonListener);
+		
 		raised = new Button(this, SWT.NONE);
 		raised.setText("Raised Axis");
 		raised.addSelectionListener(buttonListener);
@@ -94,20 +98,21 @@ public class SketchWindow extends Composite
 		int height= this.getSize().y;
 		canvas.setBounds(5, 5, width-10, height-100);
 		
-		outline.setBounds(10, height-90, 80, 40);
-		triangles.setBounds(90, height-90, 80, 40);
-		midpoints.setBounds(170, height-90, 80, 40);
-		chordal.setBounds(250, height-90, 80, 40);
-		pruneStep.setBounds(330, height-90, 80, 40);
-		pruneAll.setBounds(410, height-90, 80, 40);
-		pruned.setBounds(490, height-90, 80, 40);
-		raised.setBounds(570, height-90, 80, 40);
-		mesh.setBounds(650, height-90, 80, 40);
+		outline.setBounds(5, height-90, 80, 40);
+		triangles.setBounds(85, height-90, 80, 40);
+		midpoints.setBounds(165, height-90, 80, 40);
+		chordal.setBounds(245, height-90, 80, 40);
+		pruneStep.setBounds(325, height-90, 80, 40);
+		pruneAll.setBounds(405, height-90, 80, 40);
+		pruned.setBounds(485, height-90, 80, 40);
+		subdivide.setBounds(565, height-90, 80, 40);
+		raised.setBounds(645, height-90, 80, 40);
+		mesh.setBounds(725, height-90, 80, 40);
 		
-		axes.setBounds(10, height-50, 80, 40);
-		resetCamera.setBounds(90, height-50, 80, 40);
-		clear.setBounds(170, height-50, 80, 40);
-		resetPruning.setBounds(250, height-50, 80, 40);
+		axes.setBounds(5, height-50, 80, 40);
+		resetCamera.setBounds(85, height-50, 80, 40);
+		clear.setBounds(165, height-50, 80, 40);
+		resetPruning.setBounds(245, height-50, 80, 40);
 		
 	}
 	

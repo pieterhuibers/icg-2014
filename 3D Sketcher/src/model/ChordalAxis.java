@@ -50,6 +50,18 @@ public class ChordalAxis
 		}
 	}
 	
+	public boolean contains(TriangulationPoint point)
+	{
+		if(Util.distance(start.getPoint(),point)<Util.THRESHOLD)
+		{
+			return true;
+		}
+		else
+		{
+			return start.contains(point);
+		}
+	}
+	
 	public ChordalAxis clone()
 	{
 		ChordalAxisPoint startClone = start.clone();

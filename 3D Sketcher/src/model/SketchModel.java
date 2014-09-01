@@ -26,6 +26,7 @@ public class SketchModel
 	private ChordalAxis chordalAxis;
 	private List<DelaunayTriangle> prunedTriangles;
 	private ChordalAxis prunedChordalAxis;
+	private List<DelaunayTriangle> subdividedTriangles;
 	
 	private DelaunayTriangle currentTerminal;
 	private DelaunayTriangle currentTriangle;
@@ -42,6 +43,7 @@ public class SketchModel
 		t = new ArrayList<DelaunayTriangle>();
 		triangles = new ArrayList<DelaunayTriangle>();
 		prunedTriangles = new ArrayList<DelaunayTriangle>();
+		subdividedTriangles = new ArrayList<DelaunayTriangle>();
 		considered = new ArrayList<DelaunayTriangle>();
 	}
 
@@ -76,7 +78,8 @@ public class SketchModel
 		currentEdge = null;
 		circleCenter = null;
 		circleRadius = 0.0;
-		copyTriangles();
+		copyTriangles(triangles, prunedTriangles);
+		subdividedTriangles.clear();
 	}
 
 	public void clear()
@@ -90,6 +93,7 @@ public class SketchModel
 		t.clear();
 		triangles.clear();
 		prunedTriangles.clear();
+		subdividedTriangles.clear();
 		chordalAxis = null;
 		prunedChordalAxis = null;
 		considered.clear();
@@ -112,7 +116,7 @@ public class SketchModel
 	{
 		Poly2Tri.triangulate(base);
 		triangles = base.getTriangles();
-		copyTriangles();
+		copyTriangles(triangles, prunedTriangles);
 		this.calculateTriangleTypes();
 		this.calculateChordalAxis();
 		this.prunedChordalAxis = this.chordalAxis.clone();
@@ -142,6 +146,64 @@ public class SketchModel
 		{
 			pruneCurrentEdge();
 		}
+	}
+	
+	public void subdivide()
+	{
+		subdividedTriangles.clear();
+		List<TriangulationPoint> chordalAxisPoints = prunedChordalAxis.getAllPoints();
+		for (DelaunayTriangle triangle : prunedTriangles)
+		{
+			if(containAnyPoint(triangle, chordalAxisPoints))
+			{
+				//This is one of the fanned out triangles
+				subdividedTriangles.add(triangle);
+			}
+			else if(isSleeve(triangle))
+			{
+				//find the chordal axis part dissecting this triangle
+				DTSweepConstraint chordalEdge = findIntersectingEdge(triangle);
+				System.out.println("found");
+			}
+		}
+	}
+	
+	private DTSweepConstraint findIntersectingEdge(DelaunayTriangle triangle)
+	{
+		TriangulationPoint[] midpoints = getMidPoints(triangle);
+		
+		boolean a = prunedChordalAxis.contains(midpoints[0]);
+		boolean b = prunedChordalAxis.contains(midpoints[1]);
+//		boolean c = prunedChordalAxis.contains(midpoints[2]);
+		if(a && b)
+		{
+			return new DTSweepConstraint(midpoints[0], midpoints[1]);
+		}
+		else
+		{
+			return null;
+		}
+	}
+	
+	private boolean containAnyPoint(DelaunayTriangle triangle, List<TriangulationPoint> points)
+	{
+		for (TriangulationPoint point : points)
+		{
+			if(containsPoint(triangle, point))
+				return true;
+		}
+		return false;
+	}
+	
+	private boolean containsPoint(DelaunayTriangle triangle, TriangulationPoint point)
+	{
+		if(Util.distance(triangle.points[0], point)<Util.THRESHOLD)
+			return true;
+		if(Util.distance(triangle.points[1], point)<Util.THRESHOLD)
+			return true;
+		if(Util.distance(triangle.points[2], point)<Util.THRESHOLD)
+			return true;
+		return false;
 	}
 	
 	private void pruneCurrentTerminal()
@@ -262,11 +324,11 @@ public class SketchModel
 		return true;
 	}
 	
-	private void copyTriangles()
+	private void copyTriangles(List<DelaunayTriangle> original, List<DelaunayTriangle> source)
 	{
-		for (DelaunayTriangle triangle : triangles)
+		for (DelaunayTriangle triangle : original)
 		{
-			prunedTriangles.add(triangle);
+			source.add(triangle);
 		}
 	}
 
@@ -693,6 +755,11 @@ public class SketchModel
 	public List<DelaunayTriangle> getPrunedTriangles()
 	{
 		return prunedTriangles;
+	}
+	
+	public List<DelaunayTriangle> getSubdividedTriangles()
+	{
+		return subdividedTriangles;
 	}
 	
 	public ChordalAxis getPrunedChordalAxis()

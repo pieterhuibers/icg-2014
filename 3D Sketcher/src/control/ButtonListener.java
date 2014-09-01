@@ -87,7 +87,13 @@ public class ButtonListener implements SelectionListener
 			b.setText("Pruned");
 			canvas.showPruned(false);			
 		}
-		else if(b.getText().equals("Raised"))
+		else if(b.getText().equals("Subdivide"))
+		{
+			model.subdivide();
+			boolean subdivisionShown = canvas.subdivisionShown();
+			canvas.showSubdivided(!subdivisionShown);
+		}
+		else if(b.getText().equals("Raised Axis"))
 		{
 			boolean raisedShown = canvas.raiseAxisShown();
 			canvas.showRaisedAxis(!raisedShown);
@@ -97,7 +103,7 @@ public class ButtonListener implements SelectionListener
 			boolean meshShown = canvas.meshShown();
 			canvas.showMesh(!meshShown);
 		}
-		else if(b.getText().equals("Show Axes"))
+		else if(b.getText().equals("Axes"))
 		{
 			boolean axesShown = canvas.axesShown();
 			canvas.showAxis(!axesShown);
