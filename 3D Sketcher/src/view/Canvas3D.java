@@ -244,28 +244,50 @@ public class Canvas3D extends Composite implements Runnable
 	private void drawTriangles()
 	{
 		List<DelaunayTriangle> triangles;
-		if(showPruned)
-			triangles = model.getPrunedTriangles();
-		else if(showSubdivided)
-			triangles = model.getSubdividedTriangles();
+		if(showSubdivided)
+		{
+			drawSubdivision();
+		}
 		else
-			triangles = model.getTriangles();
-		if (triangles == null)
-			return;
+		{
+			if(showPruned)
+				triangles = model.getPrunedTriangles();
+			else
+				triangles = model.getTriangles();
+			if (triangles == null)
+				return;
+			GL11.glLineWidth(1.0f);
+			GL11.glColor3f(.6f, .6f, .6f);
+			for (DelaunayTriangle triangle : triangles)
+			{
+				GL11.glBegin(GL11.GL_LINE_STRIP);
+				GL11.glVertex3d(triangle.points[0].getX(),
+						triangle.points[0].getY(), 0.0);
+				GL11.glVertex3d(triangle.points[1].getX(),
+						triangle.points[1].getY(), 0.0);
+				GL11.glVertex3d(triangle.points[2].getX(),
+						triangle.points[2].getY(), 0.0);
+				GL11.glVertex3d(triangle.points[0].getX(),
+						triangle.points[0].getY(), 0.0);
+				GL11.glEnd();
+			}
+		}
+	}
+	
+	private void drawSubdivision()
+	{
 		GL11.glLineWidth(1.0f);
 		GL11.glColor3f(.6f, .6f, .6f);
-		for (DelaunayTriangle triangle : triangles)
+		ChordalAxis axis = model.getPrunedChordalAxis();
+		for (ChordalAxisPoint axisPoint : axis.getPoints())
 		{
-			GL11.glBegin(GL11.GL_LINE_STRIP);
-			GL11.glVertex3d(triangle.points[0].getX(),
-					triangle.points[0].getY(), 0.0);
-			GL11.glVertex3d(triangle.points[1].getX(),
-					triangle.points[1].getY(), 0.0);
-			GL11.glVertex3d(triangle.points[2].getX(),
-					triangle.points[2].getY(), 0.0);
-			GL11.glVertex3d(triangle.points[0].getX(),
-					triangle.points[0].getY(), 0.0);
-			GL11.glEnd();
+			for (TriangulationPoint outlinePoint : axisPoint.getOutlinePoints())
+			{
+				GL11.glBegin(GL11.GL_LINE_STRIP);
+				GL11.glVertex3d(axisPoint.getX(),axisPoint.getY(), 0.0);
+				GL11.glVertex3d(outlinePoint.getX(),outlinePoint.getY(), 0.0);
+				GL11.glEnd();
+			}
 		}
 	}
 

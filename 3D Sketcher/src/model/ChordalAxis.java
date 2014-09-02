@@ -82,6 +82,16 @@ public class ChordalAxis
 		return null;
 	}
 	
+	public ChordalAxisPoint getPoint(TriangulationPoint point)
+	{
+		for (ChordalAxisPoint checkPoint : points)
+		{
+			if(Util.distance(checkPoint.getPoint(), point)<Util.THRESHOLD)
+				return checkPoint;
+		}
+		return null;
+	}
+	
 	public ArrayList<ChordalAxisPoint> getPoints()
 	{
 		return points;

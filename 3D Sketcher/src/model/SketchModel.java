@@ -705,18 +705,15 @@ public class SketchModel
 	private void fanOut(TriangulationPoint midpoint, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> points)
 	{
 		List<TriangulationPoint> fanPoints = getIntermediatePoints(a, b);
+		ChordalAxisPoint axisPoint = prunedChordalAxis.getPoint(midpoint);
 		for (int i = 0; i < fanPoints.size()-1; i++)
 		{
 			DelaunayTriangle fanTriangle = new DelaunayTriangle(midpoint, fanPoints.get(i), fanPoints.get(i+1));
 			prunedTriangles.add(fanTriangle);
+			axisPoint.addOutlinePoint(fanPoints.get(i));
 		}
+		axisPoint.addOutlinePoint(fanPoints.get(fanPoints.size()-1));
 	}
-	
-//	private void fanOut(DelaunayTriangle triangle, TriangulationPoint a, TriangulationPoint b, List<TriangulationPoint> points)
-//	{
-//		TriangulationPoint midpoint = Util.getMidpoint(a,b);
-//		fanOut(midpoint,a,b,points);
-//	}
 	
 	private List<TriangulationPoint> getIntermediatePoints(TriangulationPoint start, TriangulationPoint end)
 	{
