@@ -1,125 +1,52 @@
 package model;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import org.poly2tri.triangulation.TriangulationPoint;
-
-import util.Util;
 
 public class ChordalAxisPoint
 {
 	private TriangulationPoint point;
-	private ChordalAxisPoint incoming;
-	private ChordalAxisPoint outgoing1;
-	private ChordalAxisPoint outgoing2;
+	private ArrayList<ChordalAxisPoint> connections = new ArrayList<ChordalAxisPoint>();
+	private ArrayList<TriangulationPoint> outlinePoints = new ArrayList<TriangulationPoint>();
 	
 	public ChordalAxisPoint(TriangulationPoint point)
 	{
 		this.point = point;
 	}
 	
-	public void setIncoming(ChordalAxisPoint incoming)
+	public void connect(ChordalAxisPoint point)
 	{
-		this.incoming = incoming;
-	}
-	
-	public void setOutgoing1(ChordalAxisPoint outgoing1)
-	{
-		this.outgoing1 = outgoing1;
-		if(this.outgoing1!=null)
-			this.outgoing1.setIncoming(this);
-	}
-	
-	public void setOutgoing2(ChordalAxisPoint outgoing2)
-	{
-		this.outgoing2 = outgoing2;
-		if(this.outgoing2!=null)
-			this.outgoing2.setIncoming(this);
-	}
-	
-	public List<TriangulationPoint> getNextPoints()
-	{
-		List<TriangulationPoint> points = new ArrayList<TriangulationPoint>();
-		points.add(this.point);
-		if(outgoing1!=null)
-			points.addAll(outgoing1.getNextPoints());
-		if(outgoing2!=null)
-			points.addAll(outgoing2.getNextPoints());
-		return points;
-	}
-	
-	public void removePoint(ChordalAxisPoint point)
-	{
-		if(this==point)
+		if(!connections.contains(point) && point!=this)
 		{
-			if(incoming!=null)
-			{
-				incoming.setOutgoing1(outgoing1);
-				incoming.setOutgoing1(outgoing2);
-			}
-		}
-		else
-		{
-			if(outgoing1!=null)
-				outgoing1.removePoint(point);
-			if(outgoing2!=null)
-				outgoing2.removePoint(point);
+			connections.add(point);
+			point.connect(this);
 		}
 	}
 	
-	public void removePoint(TriangulationPoint point, int out)
+	public void disconnect(ChordalAxisPoint point)
 	{
-		if(Util.distance(this.point, point)<Util.THRESHOLD)
+		if(connections.contains(point) && point!=this)
 		{
-			if(incoming!=null)
-			{
-				if(out==1)
-					incoming.setOutgoing1(outgoing1);
-				else if(out==2)
-					incoming.setOutgoing2(outgoing1);	//we can only delete a node that has at much 1 outgoing connection
-			}
-		}
-		else
-		{
-			if(outgoing1!=null)
-				outgoing1.removePoint(point,1);
-			if(outgoing2!=null)
-				outgoing2.removePoint(point,2);
+			connections.remove(point);
+			point.disconnect(this);
 		}
 	}
 	
-	public boolean contains(TriangulationPoint point)
+	public void addOutlinePoint(TriangulationPoint point)
 	{
-		if(Util.distance(this.point, point)<Util.THRESHOLD)
-		{
-			return true;
-		}
-		else
-		{
-			boolean out1Contains = false;
-			boolean out2Contains = false;
-			if(outgoing1!=null)
-				out1Contains = outgoing1.contains(point);
-			if(outgoing2!=null)
-				out2Contains = outgoing2.contains(point);
-			return out1Contains || out2Contains;
-		}
+		if(!outlinePoints.contains(point))
+			outlinePoints.add(point);
 	}
 	
+	public ArrayList<ChordalAxisPoint> getConnections()
+	{
+		return connections;
+	}
+		
 	public TriangulationPoint getPoint()
 	{
 		return point;
-	}
-	
-	public ChordalAxisPoint getOutgoing1()
-	{
-		return outgoing1;
-	}
-	
-	public ChordalAxisPoint getOutgoing2()
-	{
-		return outgoing2;
 	}
 	
 	public double getX()
@@ -132,19 +59,20 @@ public class ChordalAxisPoint
 		return point.getY();
 	}
 	
+	public ArrayList<TriangulationPoint> getOutlinePoints()
+	{
+		return outlinePoints;
+	}
+	
+	@Override
+	public String toString()
+	{
+		return point.toString() + ": "+connections.size()+" connections";
+	}
+	
 	public ChordalAxisPoint clone()
 	{
 		ChordalAxisPoint clone = new ChordalAxisPoint(point);
-		if(outgoing1!=null)
-		{
-			ChordalAxisPoint out1Clone = outgoing1.clone();
-			clone.setOutgoing1(out1Clone);
-		}
-		if(outgoing2!=null)
-		{
-			ChordalAxisPoint out2Clone = outgoing2.clone();
-			clone.setOutgoing2(out2Clone);
-		}
 		return clone;
 	}
 }

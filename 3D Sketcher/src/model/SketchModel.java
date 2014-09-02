@@ -151,7 +151,7 @@ public class SketchModel
 	public void subdivide()
 	{
 		subdividedTriangles.clear();
-		List<TriangulationPoint> chordalAxisPoints = prunedChordalAxis.getAllPoints();
+		List<TriangulationPoint> chordalAxisPoints = prunedChordalAxis.getTriangulationPoints();
 		for (DelaunayTriangle triangle : prunedTriangles)
 		{
 			if(containAnyPoint(triangle, chordalAxisPoints))
@@ -509,30 +509,106 @@ public class SketchModel
 		}
 		return result;
 	}
-
+	
 	private void calculateChordalAxis()
 	{
-
+		ArrayList<ChordalAxisPoint> points = new ArrayList<ChordalAxisPoint>();
+		
+		//add points to 'points'
 		DelaunayTriangle terminal = t.get(0);
 		TriangulationPoint startPoint = getExternalPoint(terminal);
-		
 		ChordalAxisPoint start = new ChordalAxisPoint(startPoint);
+		points.add(start);
 		TriangulationPoint[] midpoints = this.getMidPoints(terminal);
 		if(midpoints.length!=1)
 			System.out.println("Number of midpoints on terminal triangle should equal 0 instead of "+midpoints.length);
 		ChordalAxisPoint next = new ChordalAxisPoint(midpoints[0]);
-		start.setOutgoing1(next);
+		start.connect(next);
+		points.add(next);
 		considered.add(terminal);
 		DelaunayTriangle[] neighbours = this.getInternalNeighbours(terminal);
-		growChordalAxis(next,neighbours[0]);
-		chordalAxis = new ChordalAxis(start);
+		growChordalAxis(next,neighbours[0],points);
+		chordalAxis = new ChordalAxis(points);	
 	}
 	
-//	private void calculatePrunedChordalAxis()
-//	{
-//		
-//	}
-	
+	private ArrayList<ChordalAxisPoint> growChordalAxis(ChordalAxisPoint current, DelaunayTriangle neighbour, ArrayList<ChordalAxisPoint> points)
+	{
+		considered.add(neighbour);
+		TriangulationPoint[] midpoints = getMidPoints(neighbour);
+		if(t.contains(neighbour))
+		{
+			TriangulationPoint point = getExternalPoint(neighbour);
+			ChordalAxisPoint newPoint = new ChordalAxisPoint(point);
+			current.connect(newPoint);
+			points.add(newPoint);
+		}
+		else if(s.contains(neighbour))
+		{
+			ChordalAxisPoint newPoint;
+			if(Util.distance(current.getPoint(), midpoints[0]) > Util.THRESHOLD)
+			{
+				newPoint = new ChordalAxisPoint(midpoints[0]);
+			}
+			else
+			{
+				newPoint = new ChordalAxisPoint(midpoints[1]);
+			}
+			current.connect(newPoint);
+			points.add(newPoint);
+			DelaunayTriangle[] allNeighbours = getInternalNeighbours(neighbour);
+			DelaunayTriangle[] neighbours = discardConsideredNeighbours(allNeighbours);
+			//We know there is only one unconsidered neighbour
+			growChordalAxis(newPoint, neighbours[0],points);
+		}
+		else if(j.contains(neighbour))
+		{
+			ChordalAxisPoint center = new ChordalAxisPoint(new PolygonPoint(neighbour.centroid().getX(),neighbour.centroid().getY()));
+			current.connect(center);
+			points.add(center);
+			DelaunayTriangle[] allNeighbours = getInternalNeighbours(neighbour);
+			DelaunayTriangle[] neighbours = discardConsideredNeighbours(allNeighbours);
+			int index1 = -1;
+			int index2 = -1;
+			for (int i = 0; i < 3; i++)
+			{
+				if(Util.distance(current.getPoint(), midpoints[i]) > Util.THRESHOLD)
+				{
+					if(index1 == -1)
+						index1 = i;
+					else if(index2 == -1)
+						index2 = i;
+				}
+			}
+			ChordalAxisPoint newPoint1 = new ChordalAxisPoint(midpoints[index1]);
+			ChordalAxisPoint newPoint2 = new ChordalAxisPoint(midpoints[index2]);
+			center.connect(newPoint1);
+			center.connect(newPoint2);
+			points.add(newPoint1);
+			points.add(newPoint2);
+			
+			//We know there are two unconsidered neighbour
+			
+			boolean connectNeighbour1ToMidpoint1 = false;
+			TriangulationPoint[] neighbour1Midpoints = getMidPoints(neighbours[0]);
+			for (int i = 0; i < neighbour1Midpoints.length; i++)
+			{
+				if(Util.distance(newPoint1.getPoint(),neighbour1Midpoints[i]) < Util.THRESHOLD)
+					connectNeighbour1ToMidpoint1 = true;
+			}
+			if(connectNeighbour1ToMidpoint1)
+			{
+				growChordalAxis(newPoint1, neighbours[0],points);
+				growChordalAxis(newPoint2, neighbours[1],points);
+			}
+			else
+			{
+				growChordalAxis(newPoint1, neighbours[1],points);
+				growChordalAxis(newPoint2, neighbours[0],points);
+			}
+		}
+		return points;
+	}
+
 	private TriangulationPoint getExternalPoint(DelaunayTriangle terminal)
 	{
 		int index = -1;
@@ -550,80 +626,6 @@ public class SketchModel
 		else
 		{
 			return terminal.points[index];
-		}
-	}
-
-	private void growChordalAxis(ChordalAxisPoint current, DelaunayTriangle neighbour)
-	{
-		considered.add(neighbour);
-		TriangulationPoint[] midpoints = getMidPoints(neighbour);
-		if(t.contains(neighbour))
-		{
-			TriangulationPoint point = getExternalPoint(neighbour);
-			ChordalAxisPoint newPoint = new ChordalAxisPoint(point);
-			current.setOutgoing1(newPoint);
-			return;
-		}
-		else if(s.contains(neighbour))
-		{
-			ChordalAxisPoint newPoint;
-			if(Util.distance(current.getPoint(), midpoints[0]) > Util.THRESHOLD)
-			{
-				newPoint = new ChordalAxisPoint(midpoints[0]);
-			}
-			else
-			{
-				newPoint = new ChordalAxisPoint(midpoints[1]);
-			}
-			current.setOutgoing1(newPoint);;
-			DelaunayTriangle[] allNeighbours = getInternalNeighbours(neighbour);
-			DelaunayTriangle[] neighbours = discardConsideredNeighbours(allNeighbours);
-			//We know there is only one unconsidered neighbour
-			growChordalAxis(newPoint, neighbours[0]);
-		}
-		else if(j.contains(neighbour))
-		{
-			ChordalAxisPoint center = new ChordalAxisPoint(new PolygonPoint(neighbour.centroid().getX(),neighbour.centroid().getY()));
-			current.setOutgoing1(center);
-			current.setOutgoing1(center);
-			DelaunayTriangle[] allNeighbours = getInternalNeighbours(neighbour);
-			DelaunayTriangle[] neighbours = discardConsideredNeighbours(allNeighbours);
-			int index1 = -1;
-			int index2 = -1;
-			for (int i = 0; i < 3; i++)
-			{
-				if(Util.distance(current.getPoint(), midpoints[i]) > Util.THRESHOLD)
-				{
-					if(index1 == -1)
-						index1 = i;
-					else if(index2 == -1)
-						index2 = i;
-				}
-			}
-			ChordalAxisPoint newPoint1 = new ChordalAxisPoint(midpoints[index1]);
-			ChordalAxisPoint newPoint2 = new ChordalAxisPoint(midpoints[index2]);
-			center.setOutgoing1(newPoint1);
-			center.setOutgoing2(newPoint2);
-			
-			//We know there are two unconsidered neighbour
-			
-			boolean connectNeighbour1ToMidpoint1 = false;
-			TriangulationPoint[] neighbour1Midpoints = getMidPoints(neighbours[0]);
-			for (int i = 0; i < neighbour1Midpoints.length; i++)
-			{
-				if(Util.distance(newPoint1.getPoint(),neighbour1Midpoints[i]) < Util.THRESHOLD)
-					connectNeighbour1ToMidpoint1 = true;
-			}
-			if(connectNeighbour1ToMidpoint1)
-			{
-				growChordalAxis(newPoint1, neighbours[0]);
-				growChordalAxis(newPoint2, neighbours[1]);
-			}
-			else
-			{
-				growChordalAxis(newPoint1, neighbours[1]);
-				growChordalAxis(newPoint2, neighbours[0]);
-			}
 		}
 	}
 	
@@ -858,7 +860,7 @@ public class SketchModel
 	public List<TriangulationPoint> getChordalAxisPoints()
 	{
 		if(chordalAxis!=null)
-			return chordalAxis.getAllPoints();
+			return chordalAxis.getTriangulationPoints();
 		else
 			return null;
 	}
@@ -866,7 +868,7 @@ public class SketchModel
 	public List<TriangulationPoint> getPrunedChordalAxisPoints()
 	{
 		if(prunedChordalAxis!=null)
-			return prunedChordalAxis.getAllPoints();
+			return prunedChordalAxis.getTriangulationPoints();
 		else
 			return null;
 	}

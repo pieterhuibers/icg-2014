@@ -2,6 +2,7 @@ package view;
 
 import java.util.List;
 
+import model.ChordalAxis;
 import model.ChordalAxisPoint;
 import model.SketchModel;
 
@@ -284,7 +285,32 @@ public class Canvas3D extends Composite implements Runnable
 			DrawShape.sphere(midpoint.getX(), midpoint.getY(), 0.0, 0.02);
 		}
 	}
+	
+	private void drawChordalAxis()
+	{
+		if(model.getChordalAxis()==null)
+			return;
+		ChordalAxis axis;
+		if(!showPruned && !showSubdivided)
+			axis = model.getChordalAxis();
+		else
+			axis = model.getPrunedChordalAxis();
+		GL11.glLineWidth(5.0f);
+		GL11.glColor3f(.3f, .5f, .3f);
+				
+		for (ChordalAxisPoint point : axis.getPoints())
+		{
+			for (ChordalAxisPoint connection : point.getConnections())
+			{
+				GL11.glBegin(GL11.GL_LINE_STRIP);
+				GL11.glVertex3d(point.getX(), point.getY(), 0.0);
+				GL11.glVertex3d(connection.getX(), connection.getY(), 0.0);
+				GL11.glEnd();
+			}
+		}
+	}
 
+	/*
 	private void drawChordalAxis()
 	{
 		if(model.getChordalAxis()==null)
@@ -331,7 +357,7 @@ public class Canvas3D extends Composite implements Runnable
 			GL11.glVertex3d(point.getX(), point.getY(), height);
 			drawChordalAxis(o2,height);
 		}
-	}
+	}*/
 
 	private void drawPlane()
 	{

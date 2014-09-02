@@ -129,18 +129,21 @@ public class Util
 		TriangulationPoint[] p1 = triangle1.points;
 		TriangulationPoint[] p2 = triangle2.points;
 		
+		boolean p1Set = false;
+		
 		for (int i = 0; i < p2.length; i++)
 		{
 			if(distance(p1[0], p2[i])<THRESHOLD)
 			{
 				result.p = p1[0];
+				p1Set = true;
 			}
 		}
 		for (int i = 0; i < p2.length; i++)
 		{
 			if(distance(p1[1], p2[i])<THRESHOLD)
 			{
-				if(result.p==null)
+				if(!p1Set)
 					result.p = p1[1];
 				else
 					result.q = p1[1];
