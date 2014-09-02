@@ -7,12 +7,20 @@ import org.poly2tri.triangulation.TriangulationPoint;
 public class ChordalAxisPoint
 {
 	private TriangulationPoint point;
+	private double height;
 	private ArrayList<ChordalAxisPoint> connections = new ArrayList<ChordalAxisPoint>();
 	private ArrayList<TriangulationPoint> outlinePoints = new ArrayList<TriangulationPoint>();
 	
 	public ChordalAxisPoint(TriangulationPoint point)
 	{
 		this.point = point;
+		this.height = 0.0;
+	}
+
+	public ChordalAxisPoint(TriangulationPoint point, double height)
+	{
+		this.point = point;
+		this.height = height;
 	}
 	
 	public void connect(ChordalAxisPoint point)
@@ -59,6 +67,16 @@ public class ChordalAxisPoint
 		return point.getY();
 	}
 	
+	public void setZ(double z)
+	{
+		this.height = z;
+	}
+	
+	public double getZ()
+	{
+		return height;
+	}
+	
 	public ArrayList<TriangulationPoint> getOutlinePoints()
 	{
 		return outlinePoints;
@@ -72,7 +90,11 @@ public class ChordalAxisPoint
 	
 	public ChordalAxisPoint clone()
 	{
-		ChordalAxisPoint clone = new ChordalAxisPoint(point);
+		ChordalAxisPoint clone = new ChordalAxisPoint(point,height);
+		for (TriangulationPoint outlinePoint : outlinePoints)
+		{
+			clone.addOutlinePoint(outlinePoint);
+		}
 		return clone;
 	}
 }

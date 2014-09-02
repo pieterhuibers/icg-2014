@@ -10,7 +10,6 @@ import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
 import org.poly2tri.triangulation.delaunay.sweep.DTSweepConstraint;
 
-import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
 import util.Util;
 
 public class SketchModel
@@ -28,6 +27,7 @@ public class SketchModel
 	private List<DelaunayTriangle> prunedTriangles;
 	private ChordalAxis prunedChordalAxis;
 	private List<DelaunayTriangle> subdividedTriangles;
+	private ChordalAxis raisedChordalAxis;
 	
 	private DelaunayTriangle currentTerminal;
 	private DelaunayTriangle currentTriangle;
@@ -169,7 +169,22 @@ public class SketchModel
 				//junction triangle
 				subdivideJunction(triangle);
 			}
-			
+		}
+	}
+	
+	public void raiseChordalAxis()
+	{
+		double raiseConstant = 1.0;
+		this.raisedChordalAxis = prunedChordalAxis.clone();
+		for (ChordalAxisPoint point : raisedChordalAxis.getPoints())
+		{
+			double sum = 0.0;
+			for (TriangulationPoint outlinePoint : point.getOutlinePoints())
+			{
+				sum = sum + Util.distance(point.getPoint(), outlinePoint);
+			}
+			double avgDistance = sum/(double)point.getOutlinePoints().size();
+			point.setZ(raiseConstant*avgDistance);
 		}
 	}
 	
@@ -875,6 +890,11 @@ public class SketchModel
 			return prunedChordalAxis.getTriangulationPoints();
 		else
 			return null;
+	}
+	
+	public ChordalAxis getRaisedChordalAxis()
+	{
+		return raisedChordalAxis;
 	}
 
 	public boolean isClosed()

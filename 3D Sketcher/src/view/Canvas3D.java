@@ -186,14 +186,12 @@ public class Canvas3D extends Composite implements Runnable
 			drawPoints();
 		}
 		drawPruningCircle();
-		if (showTriangles)
+		if(showTriangles)
 			drawTriangles();
-		if (showMidpoints)
+		if(showMidpoints)
 			drawMidpoints();
-		if (showChordalAxis)
+		if(showChordalAxis)
 			drawChordalAxis();
-		
-
 	}
 	
 	private void drawOutline()
@@ -284,8 +282,8 @@ public class Canvas3D extends Composite implements Runnable
 			for (TriangulationPoint outlinePoint : axisPoint.getOutlinePoints())
 			{
 				GL11.glBegin(GL11.GL_LINE_STRIP);
-				GL11.glVertex3d(axisPoint.getX(),axisPoint.getY(), 0.0);
-				GL11.glVertex3d(outlinePoint.getX(),outlinePoint.getY(), 0.0);
+				GL11.glVertex3d(axisPoint.getX(),axisPoint.getY(), axisPoint.getZ());
+				GL11.glVertex3d(outlinePoint.getX(),outlinePoint.getY(), axisPoint.getZ());
 				GL11.glEnd();
 			}
 		}
@@ -308,6 +306,39 @@ public class Canvas3D extends Composite implements Runnable
 		}
 	}
 	
+	private void drawChordalAxis(ChordalAxis axis)
+	{
+		GL11.glLineWidth(5.0f);
+		GL11.glColor3f(.3f, .5f, .3f);
+				
+		for (ChordalAxisPoint point : axis.getPoints())
+		{
+			for (ChordalAxisPoint connection : point.getConnections())
+			{
+				GL11.glBegin(GL11.GL_LINE_STRIP);
+				GL11.glVertex3d(point.getX(), point.getY(), point.getZ());
+				GL11.glVertex3d(connection.getX(), connection.getY(), connection.getZ());
+				GL11.glEnd();
+			}
+		}
+	}
+	
+	private void drawDownwardLines(ChordalAxis axis)
+	{
+		GL11.glLineWidth(1.0f);
+		GL11.glColor3f(.6f, .6f, .6f);
+		for (ChordalAxisPoint point : axis.getPoints())
+		{
+			for (TriangulationPoint outlinePoint: point.getOutlinePoints())
+			{
+				GL11.glBegin(GL11.GL_LINE_STRIP);
+				GL11.glVertex3d(point.getX(), point.getY(), point.getZ());
+				GL11.glVertex3d(outlinePoint.getX(), outlinePoint.getY(), 0.0);
+				GL11.glEnd();
+			}
+		}
+	}
+	
 	private void drawChordalAxis()
 	{
 		if(model.getChordalAxis()==null)
@@ -317,69 +348,14 @@ public class Canvas3D extends Composite implements Runnable
 			axis = model.getChordalAxis();
 		else
 			axis = model.getPrunedChordalAxis();
-		GL11.glLineWidth(5.0f);
-		GL11.glColor3f(.3f, .5f, .3f);
-				
-		for (ChordalAxisPoint point : axis.getPoints())
-		{
-			for (ChordalAxisPoint connection : point.getConnections())
-			{
-				GL11.glBegin(GL11.GL_LINE_STRIP);
-				GL11.glVertex3d(point.getX(), point.getY(), 0.0);
-				GL11.glVertex3d(connection.getX(), connection.getY(), 0.0);
-				GL11.glEnd();
-			}
-		}
-	}
-
-	/*
-	private void drawChordalAxis()
-	{
-		if(model.getChordalAxis()==null)
-			return;
-		ChordalAxisPoint start;
-		
-		if(!showPruned && !showSubdivided)
-			start = model.getChordalAxis().getStartPoint();
-//		else if(showSubdivided)
-//			start = model.getPrunedChordalAxis().getStartPoint();
-		else
-			start = model.getPrunedChordalAxis().getStartPoint();
-		
-		
-		drawChordalAxis(start,0.0);
+		drawChordalAxis(axis);
 		if(showRaisedAxis)
 		{
-			drawChordalAxis(start,1.0);
+			axis = model.getRaisedChordalAxis();
+			drawChordalAxis(axis);
+			drawDownwardLines(axis);
 		}
 	}
-	
-	private void drawChordalAxis(ChordalAxisPoint point, double height)
-	{
-		GL11.glLineWidth(5.0f);
-		GL11.glBegin(GL11.GL_LINE_STRIP);
-		GL11.glColor3f(.3f, .5f, .3f);
-		ChordalAxisPoint o1 = point.getOutgoing1();
-		ChordalAxisPoint o2 = point.getOutgoing2();
-		if(o1==null && o2==null)	//terminal point
-		{
-			GL11.glVertex3d(point.getX(), point.getY(), height);
-			GL11.glEnd();
-		}
-		else if(o1 != null && o2 == null) //one section
-		{
-			GL11.glVertex3d(point.getX(), point.getY(), height);
-			drawChordalAxis(o1,height);
-		}
-		else if(o1 != null && o2 != null) //split
-		{
-			GL11.glVertex3d(point.getX(), point.getY(), height);
-			drawChordalAxis(o1,height);
-			GL11.glBegin(GL11.GL_LINE_STRIP);
-			GL11.glVertex3d(point.getX(), point.getY(), height);
-			drawChordalAxis(o2,height);
-		}
-	}*/
 
 	private void drawPlane()
 	{

@@ -95,6 +95,7 @@ public class ButtonListener implements SelectionListener
 		}
 		else if(b.getText().equals("Raised Axis"))
 		{
+			model.raiseChordalAxis();
 			boolean raisedShown = canvas.raiseAxisShown();
 			canvas.showRaisedAxis(!raisedShown);
 		}
