@@ -290,8 +290,11 @@ public class Canvas3D extends Composite implements Runnable
 		if(model.getChordalAxis()==null)
 			return;
 		ChordalAxisPoint start;
-		if(!showPruned)
+		
+		if(!showPruned && !showSubdivided)
 			start = model.getChordalAxis().getStartPoint();
+//		else if(showSubdivided)
+//			start = model.getPrunedChordalAxis().getStartPoint();
 		else
 			start = model.getPrunedChordalAxis().getStartPoint();
 		

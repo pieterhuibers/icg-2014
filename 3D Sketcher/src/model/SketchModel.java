@@ -161,11 +161,94 @@ public class SketchModel
 			}
 			else if(isSleeve(triangle))
 			{
-				//find the chordal axis part dissecting this triangle
-				DTSweepConstraint chordalEdge = findIntersectingEdge(triangle);
-				System.out.println("found");
+				subdivideSleeve(triangle);
 			}
+			else
+			{
+				//junction triangle
+				subdivideJunction(triangle);
+			}
+			
 		}
+	}
+	
+	private void subdivideSleeve(DelaunayTriangle sleeve)
+	{
+		//find the chordal axis part dissecting this triangle
+		DTSweepConstraint chordalEdge = findIntersectingEdge(sleeve);
+		double d0 = Util.distance(chordalEdge, sleeve.points[0]);
+		double d1 = Util.distance(chordalEdge, sleeve.points[1]);
+		double d2 = Util.distance(chordalEdge, sleeve.points[2]);
+		
+		ArrayList<TriangulationPoint> pos = new ArrayList<TriangulationPoint>();
+		ArrayList<TriangulationPoint> neg = new ArrayList<TriangulationPoint>();
+		if(d0>0)
+			pos.add(sleeve.points[0]);
+		else
+			neg.add(sleeve.points[0]);
+		if(d1>0)
+			pos.add(sleeve.points[1]);
+		else
+			neg.add(sleeve.points[1]);
+		if(d2>0)
+			pos.add(sleeve.points[2]);
+		else
+			neg.add(sleeve.points[2]);
+		DelaunayTriangle t1;
+		DelaunayTriangle t2;
+		DelaunayTriangle t3;
+		if(pos.size()==2)
+		{
+			double p0 = Math.abs(Util.distance(new DTSweepConstraint(pos.get(0), neg.get(0)),chordalEdge.p));
+			double p1 = Math.abs(Util.distance(new DTSweepConstraint(pos.get(1), neg.get(0)),chordalEdge.p));
+			boolean pOnPos0Edge = p0 < p1;
+			if(pOnPos0Edge)
+			{
+				t1 = new DelaunayTriangle(pos.get(0), pos.get(1), chordalEdge.p);
+				t2 = new DelaunayTriangle(pos.get(1), chordalEdge.p, chordalEdge.q);
+			}
+			else
+			{
+				t1 = new DelaunayTriangle(pos.get(0), pos.get(1), chordalEdge.p);
+				t2 = new DelaunayTriangle(pos.get(0), chordalEdge.p, chordalEdge.q);
+			}
+			t3 = new DelaunayTriangle(chordalEdge.p, chordalEdge.q, neg.get(0));
+		}
+		else
+		{
+			double n0 = Math.abs(Util.distance(new DTSweepConstraint(neg.get(0), pos.get(0)),chordalEdge.p));
+			double n1 = Math.abs(Util.distance(new DTSweepConstraint(neg.get(1), pos.get(0)),chordalEdge.p));
+			boolean pOnNeg0Edge = n0 < n1;
+			if(pOnNeg0Edge)
+			{
+				t1 = new DelaunayTriangle(neg.get(0), neg.get(1), chordalEdge.p);
+				t2 = new DelaunayTriangle(neg.get(1), chordalEdge.p, chordalEdge.q);
+			}
+			else
+			{
+				t1 = new DelaunayTriangle(neg.get(0), neg.get(1), chordalEdge.p);
+				t2 = new DelaunayTriangle(neg.get(0), chordalEdge.p, chordalEdge.q);
+			}
+			
+			t3 = new DelaunayTriangle(chordalEdge.p, chordalEdge.q, pos.get(0));
+		}
+		subdividedTriangles.add(t1);
+		subdividedTriangles.add(t2);
+		subdividedTriangles.add(t3);
+	}
+	
+	private void subdivideJunction(DelaunayTriangle junction)
+	{
+		TriangulationPoint center = junction.centroid();
+		TriangulationPoint[] points = junction.points;
+		
+		DelaunayTriangle t1 = new DelaunayTriangle(center, points[0], points[1]);
+		DelaunayTriangle t2 = new DelaunayTriangle(center, points[1], points[2]);
+		DelaunayTriangle t3 = new DelaunayTriangle(center, points[0], points[2]);
+		
+		subdividedTriangles.add(t1);
+		subdividedTriangles.add(t2);
+		subdividedTriangles.add(t3);
 	}
 	
 	private DTSweepConstraint findIntersectingEdge(DelaunayTriangle triangle)

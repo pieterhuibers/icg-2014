@@ -155,4 +155,18 @@ public class Util
 		}
 		return result;
 	}
+	
+	public static double distance(DTSweepConstraint edge, TriangulationPoint point)
+	{
+		double x0 = point.getX();
+		double y0 = point.getY();
+		double x1 = edge.p.getX();
+		double y1 = edge.p.getY();
+		double x2 = edge.q.getX();
+		double y2 = edge.q.getY();
+		
+		double a = (x2-x1)*(y1-y0)-(x1-x0)*(y2-y1);
+		double b = Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+		return a/b;
+	}
 }
