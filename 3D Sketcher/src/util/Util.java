@@ -172,4 +172,23 @@ public class Util
 		double b = Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
 		return a/b;
 	}
+	
+	public static TriangulationPoint getRemainingPoint(DelaunayTriangle triangle, DTSweepConstraint edge)
+	{
+		boolean p1 = (pointsEqual(triangle.points[0], edge.p) || pointsEqual(triangle.points[0], edge.q));
+		boolean p2 = (pointsEqual(triangle.points[1], edge.p) || pointsEqual(triangle.points[1], edge.q));
+		boolean p3 = (pointsEqual(triangle.points[2], edge.p) || pointsEqual(triangle.points[2], edge.q));
+		if(!p1)
+			return triangle.points[0];
+		else if(!p2)
+			return triangle.points[1];
+		else if(!p3)
+			return triangle.points[2];
+		return null;
+	}
+	
+	public static boolean pointsEqual(TriangulationPoint pointA, TriangulationPoint pointB)
+	{
+		return Util.distance(pointA, pointB)<Util.EPSILON;
+	}
 }

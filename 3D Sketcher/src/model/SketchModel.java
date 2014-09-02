@@ -10,6 +10,7 @@ import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
 import org.poly2tri.triangulation.delaunay.sweep.DTSweepConstraint;
 
+import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
 import util.Util;
 
 public class SketchModel
@@ -194,47 +195,45 @@ public class SketchModel
 			pos.add(sleeve.points[2]);
 		else
 			neg.add(sleeve.points[2]);
-		DelaunayTriangle t1;
-		DelaunayTriangle t2;
-		DelaunayTriangle t3;
+		ChordalAxisPoint p = prunedChordalAxis.getPoint(chordalEdge.p);
+		ChordalAxisPoint q = prunedChordalAxis.getPoint(chordalEdge.q);
 		if(pos.size()==2)
 		{
 			double p0 = Math.abs(Util.distance(new DTSweepConstraint(pos.get(0), neg.get(0)),chordalEdge.p));
 			double p1 = Math.abs(Util.distance(new DTSweepConstraint(pos.get(1), neg.get(0)),chordalEdge.p));
 			boolean pOnPos0Edge = p0 < p1;
+			p.addOutlinePoint(pos.get(0));
+			p.addOutlinePoint(pos.get(1));
+			p.addOutlinePoint(neg.get(0));
+			q.addOutlinePoint(neg.get(0));
 			if(pOnPos0Edge)
 			{
-				t1 = new DelaunayTriangle(pos.get(0), pos.get(1), chordalEdge.p);
-				t2 = new DelaunayTriangle(pos.get(1), chordalEdge.p, chordalEdge.q);
+				q.addOutlinePoint(pos.get(1));
 			}
 			else
 			{
-				t1 = new DelaunayTriangle(pos.get(0), pos.get(1), chordalEdge.p);
-				t2 = new DelaunayTriangle(pos.get(0), chordalEdge.p, chordalEdge.q);
+				
+				q.addOutlinePoint(pos.get(0));
 			}
-			t3 = new DelaunayTriangle(chordalEdge.p, chordalEdge.q, neg.get(0));
 		}
 		else
 		{
 			double n0 = Math.abs(Util.distance(new DTSweepConstraint(neg.get(0), pos.get(0)),chordalEdge.p));
 			double n1 = Math.abs(Util.distance(new DTSweepConstraint(neg.get(1), pos.get(0)),chordalEdge.p));
 			boolean pOnNeg0Edge = n0 < n1;
+			p.addOutlinePoint(neg.get(0));
+			p.addOutlinePoint(neg.get(1));
+			p.addOutlinePoint(pos.get(0));
+			q.addOutlinePoint(pos.get(0));
 			if(pOnNeg0Edge)
 			{
-				t1 = new DelaunayTriangle(neg.get(0), neg.get(1), chordalEdge.p);
-				t2 = new DelaunayTriangle(neg.get(1), chordalEdge.p, chordalEdge.q);
+				q.addOutlinePoint(neg.get(1));
 			}
 			else
 			{
-				t1 = new DelaunayTriangle(neg.get(0), neg.get(1), chordalEdge.p);
-				t2 = new DelaunayTriangle(neg.get(0), chordalEdge.p, chordalEdge.q);
+				q.addOutlinePoint(neg.get(0));
 			}
-			
-			t3 = new DelaunayTriangle(chordalEdge.p, chordalEdge.q, pos.get(0));
 		}
-		subdividedTriangles.add(t1);
-		subdividedTriangles.add(t2);
-		subdividedTriangles.add(t3);
 	}
 	
 	private void subdivideJunction(DelaunayTriangle junction)
@@ -242,13 +241,18 @@ public class SketchModel
 		TriangulationPoint center = junction.centroid();
 		TriangulationPoint[] points = junction.points;
 		
-		DelaunayTriangle t1 = new DelaunayTriangle(center, points[0], points[1]);
-		DelaunayTriangle t2 = new DelaunayTriangle(center, points[1], points[2]);
-		DelaunayTriangle t3 = new DelaunayTriangle(center, points[0], points[2]);
+		ChordalAxisPoint axisPoint = prunedChordalAxis.getPoint(center);
+		axisPoint.addOutlinePoint(points[0]);
+		axisPoint.addOutlinePoint(points[1]);
+		axisPoint.addOutlinePoint(points[2]);
 		
-		subdividedTriangles.add(t1);
-		subdividedTriangles.add(t2);
-		subdividedTriangles.add(t3);
+//		DelaunayTriangle t1 = new DelaunayTriangle(center, points[0], points[1]);
+//		DelaunayTriangle t2 = new DelaunayTriangle(center, points[1], points[2]);
+//		DelaunayTriangle t3 = new DelaunayTriangle(center, points[0], points[2]);
+//		
+//		subdividedTriangles.add(t1);
+//		subdividedTriangles.add(t2);
+//		subdividedTriangles.add(t3);
 	}
 	
 	private DTSweepConstraint findIntersectingEdge(DelaunayTriangle triangle)
@@ -328,10 +332,13 @@ public class SketchModel
 		else if(isJunction(currentTriangle))
 		{
 			prunedTriangles.remove(currentTriangle);
+			TriangulationPoint remainingPoint = Util.getRemainingPoint(currentTriangle, currentEdge);
 			TriangulationPoint midpoint = Util.getMidpoint(currentEdge.p, currentEdge.q);
 			prunedChordalAxis.removePoint(midpoint);
 			TriangulationPoint center = currentTriangle.centroid();
 			fanOut(center, currentEdge.p, currentEdge.q, pointsToCheck);
+			ChordalAxisPoint axisPoint = prunedChordalAxis.getPoint(center);
+			axisPoint.addOutlinePoint(remainingPoint);
 			selectNextTerminal();
 		}
 		else if(isTerminal(currentTriangle))
