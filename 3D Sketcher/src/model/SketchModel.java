@@ -11,6 +11,8 @@ import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
 import org.poly2tri.triangulation.delaunay.sweep.DTSweepConstraint;
 
 import util.Util;
+import util.Vector3D;
+import util.VectorUtil;
 
 public class SketchModel
 {
@@ -28,11 +30,14 @@ public class SketchModel
 	private ChordalAxis prunedChordalAxis;
 	private List<DelaunayTriangle> subdividedTriangles;
 	private ChordalAxis raisedChordalAxis;
+	private ChordalAxis loweredChordalAxis;
 	
 	private DelaunayTriangle currentTerminal;
 	private DelaunayTriangle currentTriangle;
 	private DTSweepConstraint currentEdge;
 	private ArrayList<TriangulationPoint> pointsToCheck = new ArrayList<TriangulationPoint>();
+	
+	private ArrayList<Triangle> mesh;
 	
 	private TriangulationPoint circleCenter;
 	private double circleRadius;
@@ -185,6 +190,73 @@ public class SketchModel
 			}
 			double avgDistance = sum/(double)point.getOutlinePoints().size();
 			point.setZ(raiseConstant*avgDistance);
+		}
+		lowerChordalAxis();
+	}
+	
+	public void createMesh(int nrOfFaces)
+	{
+		if(nrOfFaces<1)
+			return;
+		raiseChordalAxis();
+		mesh = new ArrayList<Triangle>();
+		for (ChordalAxisPoint axisPoint : raisedChordalAxis.getPoints())
+		{
+			createQuarterOvals(axisPoint, nrOfFaces);
+		}
+	}
+	
+	private void createQuarterOvals(ChordalAxisPoint point, int nrOfFaces)
+	{
+		for (TriangulationPoint outlinePoint : point.getOutlinePoints())
+		{
+			createQuarterOval(point,outlinePoint,nrOfFaces);
+		}
+	}
+	
+	private void createQuarterOval(ChordalAxisPoint point, TriangulationPoint outlinePoint, int nrOfFaces)
+	{
+		TriangulationPoint basePoint = point.getPoint();
+		Vector3D outlinePoint3D = new Vector3D(outlinePoint.getX(), outlinePoint.getY(), 0.0);
+		Vector3D basePoint3D = new Vector3D(basePoint.getX(), basePoint.getY(), 0.0);
+		double height = point.getZ();
+		double width = Util.distance(point.getPoint(), outlinePoint);
+//		double ratio = height/width;
+		double degreesPerStep = 90.0/nrOfFaces;
+		double angleInZPlane = Util.getAngle(basePoint3D.x, basePoint3D.y, outlinePoint3D.x, outlinePoint3D.y);
+		
+		for(int i=0; i<nrOfFaces; i++)
+		{
+			double deg1 = i*degreesPerStep;
+			double angle1 = Math.toRadians(deg1);
+			double baseLength1 = Math.cos(angle1)*width;
+			double deltaX1 = Math.cos(angleInZPlane)*baseLength1;
+			double deltaY1 = Math.sin(angleInZPlane)*baseLength1;
+			double deltaZ1 = Math.sin(angle1)*height;
+			
+			double deg2 = (i+1)*degreesPerStep;
+			double angle2 = Math.toRadians(deg2);
+			double baseLength2 = Math.cos(angle2)*width;
+			double deltaX2 = Math.cos(angleInZPlane)*baseLength2;
+			double deltaY2 = Math.sin(angleInZPlane)*baseLength2;
+			double deltaZ2 = Math.sin(angle2)*height;
+			
+			Vector3D p1 = new Vector3D(basePoint3D.x+deltaX1,basePoint3D.y+deltaY1,basePoint3D.z+deltaZ1);
+			Vector3D p2 = new Vector3D(basePoint3D.x+deltaX2,basePoint3D.y+deltaY2,basePoint3D.z+deltaZ2);
+			
+			Triangle triangle = new Triangle(p1, p2, basePoint3D);
+			mesh.add(triangle);
+		}
+		
+//		Triangle lastTriangle = new Triangle(p1, p2, p3)
+	}
+
+	private void lowerChordalAxis()
+	{
+		this.loweredChordalAxis = raisedChordalAxis.clone();
+		for (ChordalAxisPoint point : loweredChordalAxis.getPoints())
+		{
+			point.setZ(-point.getZ());
 		}
 	}
 	
@@ -798,12 +870,6 @@ public class SketchModel
 		return result;
 	}
 	
-	public static DTSweepConstraint getBorderEdge(DelaunayTriangle triangle1, DelaunayTriangle triangle2)
-	{
-		return null;
-	}
-	
-	
 	private DTSweepConstraint getOppositeEdge(DelaunayTriangle triangle, TriangulationPoint point)
 	{
 		if(point==triangle.points[0])
@@ -896,6 +962,11 @@ public class SketchModel
 	{
 		return raisedChordalAxis;
 	}
+	
+	public ChordalAxis getLoweredChordalAxis()
+	{
+		return loweredChordalAxis;
+	}
 
 	public boolean isClosed()
 	{
@@ -925,5 +996,10 @@ public class SketchModel
 	public TriangulationPoint getEdgePoint2()
 	{
 		return currentEdge.q;
+	}
+	
+	public ArrayList<Triangle> getMesh()
+	{
+		return mesh;
 	}
 }

@@ -191,4 +191,15 @@ public class Util
 	{
 		return Util.distance(pointA, pointB)<Util.EPSILON;
 	}
+	
+	public static double getAngle(double x1, double y1, double x2, double y2)
+	{
+		double deltaX = x2-x1;
+		double deltaY = y2-y1;
+		double result = Math.atan2(deltaX, deltaY);
+		result = -result+0.5*Math.PI;
+		if(result>Math.PI)
+			result = -Math.PI + (result-Math.PI);
+		return result;
+	}
 }

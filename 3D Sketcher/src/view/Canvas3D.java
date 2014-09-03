@@ -1,10 +1,12 @@
 package view;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import model.ChordalAxis;
 import model.ChordalAxisPoint;
 import model.SketchModel;
+import model.Triangle;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Rectangle;
@@ -180,18 +182,49 @@ public class Canvas3D extends Composite implements Runnable
 		if (showAxes)
 			drawAxes();
 		drawPlane();
-		if(showOutline)
+		if(showMesh)
 		{
-			drawOutline();
-			drawPoints();
-		}
-		drawPruningCircle();
-		if(showTriangles)
-			drawTriangles();
-		if(showMidpoints)
-			drawMidpoints();
-		if(showChordalAxis)
+			drawMesh();
 			drawChordalAxis();
+		}
+		else
+		{
+			if(showOutline)
+			{
+				drawOutline();
+				drawPoints();
+			}
+			drawPruningCircle();
+			if(showTriangles)
+				drawTriangles();
+			if(showMidpoints)
+				drawMidpoints();
+			if(showChordalAxis)
+				drawChordalAxis();
+		}
+	}
+	
+	private void drawMesh()
+	{
+		GL11.glLineWidth(1.0f);
+		GL11.glColor3f(.6f, .6f, .6f);
+//		GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
+
+		ArrayList<Triangle> mesh = model.getMesh();
+		for (Triangle triangle : mesh)
+		{
+			fillTriangle(triangle);
+		}
+	}
+	
+	private void fillTriangle(Triangle triangle)
+	{
+		GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
+		GL11.glVertex3d(triangle.p1.x,triangle.p1.y,triangle.p1.z);
+		GL11.glVertex3d(triangle.p2.x,triangle.p2.y,triangle.p2.z);
+		GL11.glVertex3d(triangle.p3.x,triangle.p3.y,triangle.p3.z);
+//		GL11.glVertex3d(triangle.p1.x,triangle.p1.y,triangle.p1.z);
+		GL11.glEnd();
 	}
 	
 	private void drawOutline()
@@ -339,6 +372,22 @@ public class Canvas3D extends Composite implements Runnable
 		}
 	}
 	
+	private void drawUpwardLines(ChordalAxis axis)
+	{
+		GL11.glLineWidth(1.0f);
+		GL11.glColor3f(.6f, .6f, .6f);
+		for (ChordalAxisPoint point : axis.getPoints())
+		{
+			for (TriangulationPoint outlinePoint: point.getOutlinePoints())
+			{
+				GL11.glBegin(GL11.GL_LINE_STRIP);
+				GL11.glVertex3d(point.getX(), point.getY(), point.getZ());
+				GL11.glVertex3d(outlinePoint.getX(), outlinePoint.getY(), 0.0);
+				GL11.glEnd();
+			}
+		}
+	}
+	
 	private void drawChordalAxis()
 	{
 		if(model.getChordalAxis()==null)
@@ -354,6 +403,9 @@ public class Canvas3D extends Composite implements Runnable
 			axis = model.getRaisedChordalAxis();
 			drawChordalAxis(axis);
 			drawDownwardLines(axis);
+			axis = model.getLoweredChordalAxis();
+			drawChordalAxis(axis);
+			drawUpwardLines(axis);
 		}
 	}
 

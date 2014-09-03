@@ -99,8 +99,11 @@ public class ButtonListener implements SelectionListener
 			boolean raisedShown = canvas.raiseAxisShown();
 			canvas.showRaisedAxis(!raisedShown);
 		}
-		else if(b.getText().equals("Show Mesh"))
+		else if(b.getText().equals("Mesh"))
 		{
+			model.prune();
+			model.subdivide();
+			model.createMesh(5);
 			boolean meshShown = canvas.meshShown();
 			canvas.showMesh(!meshShown);
 		}
