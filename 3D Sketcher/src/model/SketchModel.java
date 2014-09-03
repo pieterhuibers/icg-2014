@@ -12,7 +12,6 @@ import org.poly2tri.triangulation.delaunay.sweep.DTSweepConstraint;
 
 import util.Util;
 import util.Vector3D;
-import util.VectorUtil;
 
 public class SketchModel
 {
@@ -208,47 +207,161 @@ public class SketchModel
 	
 	private void createQuarterOvals(ChordalAxisPoint point, int nrOfFaces)
 	{
-		for (TriangulationPoint outlinePoint : point.getOutlinePoints())
+		//Fan triangles
+		for (TriangulationPoint outlinePoint1 : point.getOutlinePoints())
 		{
-			createQuarterOval(point,outlinePoint,nrOfFaces);
+			for (TriangulationPoint outlinePoint2 : point.getOutlinePoints())
+			{
+				if(pointsArePartOfTriangle(point, outlinePoint1, outlinePoint2))
+					createQuarterOval(point,outlinePoint1,outlinePoint2,nrOfFaces);
+			}
+		}
+		//Point triangles
+		for (ChordalAxisPoint connection : point.getConnections())
+		{
+			for (TriangulationPoint outlinePoint : connection.getOutlinePoints())
+			{
+				if(pointsArePartOfTriangle(point, connection, outlinePoint))
+					createQuarterOval(point,connection,outlinePoint,nrOfFaces);
+			}
 		}
 	}
 	
-	private void createQuarterOval(ChordalAxisPoint point, TriangulationPoint outlinePoint, int nrOfFaces)
+	private boolean pointsArePartOfTriangle(ChordalAxisPoint point, TriangulationPoint outlinePoint1, TriangulationPoint outlinePoint2)
 	{
-		TriangulationPoint basePoint = point.getPoint();
+		if(outlinePoint1==outlinePoint2)
+			return false;
+		boolean outlinePoint1Found = false;
+		boolean outlinePoint2Found = false;
+		for (TriangulationPoint outlinePoint : point.getOutlinePoints())
+		{
+			if(outlinePoint1==outlinePoint)
+				outlinePoint1Found = true;
+			else if(outlinePoint2==outlinePoint)
+				outlinePoint2Found = true;
+		}
+		return outlinePoint1Found && outlinePoint2Found;
+	}
+	
+	private boolean pointsArePartOfTriangle(ChordalAxisPoint point1, ChordalAxisPoint point2, TriangulationPoint outlinePoint)
+	{
+		if(point1==point2)
+			return false;
+		boolean outlinePointFound1 = point1.getOutlinePoints().contains(outlinePoint);
+		boolean outlinePointFound2 = point2.getOutlinePoints().contains(outlinePoint);
+		return outlinePointFound1 && outlinePointFound2;
+	}
+	
+	private void createQuarterOval(ChordalAxisPoint point1, ChordalAxisPoint point2, TriangulationPoint outlinePoint, int nrOfFaces)
+	{
+		TriangulationPoint basePoint1 = point1.getPoint();
+		TriangulationPoint basePoint2 = point2.getPoint();
 		Vector3D outlinePoint3D = new Vector3D(outlinePoint.getX(), outlinePoint.getY(), 0.0);
-		Vector3D basePoint3D = new Vector3D(basePoint.getX(), basePoint.getY(), 0.0);
-		double height = point.getZ();
-		double width = Util.distance(point.getPoint(), outlinePoint);
-//		double ratio = height/width;
+		Vector3D basePoint3D1 = new Vector3D(basePoint1.getX(), basePoint1.getY(), 0.0);
+		Vector3D basePoint3D2 = new Vector3D(basePoint2.getX(), basePoint2.getY(), 0.0);
+		double height1 = point1.getZ();
+		double height2 = point2.getZ();
+		double width1 = Util.distance(point1.getPoint(), outlinePoint);
+		double width2 = Util.distance(point2.getPoint(), outlinePoint);
 		double degreesPerStep = 90.0/nrOfFaces;
-		double angleInZPlane = Util.getAngle(basePoint3D.x, basePoint3D.y, outlinePoint3D.x, outlinePoint3D.y);
+		double angleInZPlane1 = Util.getAngle(basePoint3D1.x, basePoint3D1.y, outlinePoint3D.x, outlinePoint3D.y);
+		double angleInZPlane2 = Util.getAngle(basePoint3D2.x, basePoint3D2.y, outlinePoint3D.x, outlinePoint3D.y);
 		
 		for(int i=0; i<nrOfFaces; i++)
 		{
-			double deg1 = i*degreesPerStep;
-			double angle1 = Math.toRadians(deg1);
-			double baseLength1 = Math.cos(angle1)*width;
-			double deltaX1 = Math.cos(angleInZPlane)*baseLength1;
-			double deltaY1 = Math.sin(angleInZPlane)*baseLength1;
-			double deltaZ1 = Math.sin(angle1)*height;
+			double degA1 = i*degreesPerStep;
+			double angleA1 = Math.toRadians(degA1);
+			double baseLengthA1 = Math.cos(angleA1)*width1;
+			double deltaXA1 = Math.cos(angleInZPlane1)*baseLengthA1;
+			double deltaYA1 = Math.sin(angleInZPlane1)*baseLengthA1;
+			double deltaZA1 = Math.sin(angleA1)*height1;
 			
-			double deg2 = (i+1)*degreesPerStep;
-			double angle2 = Math.toRadians(deg2);
-			double baseLength2 = Math.cos(angle2)*width;
-			double deltaX2 = Math.cos(angleInZPlane)*baseLength2;
-			double deltaY2 = Math.sin(angleInZPlane)*baseLength2;
-			double deltaZ2 = Math.sin(angle2)*height;
+			double degB1 = (i+1)*degreesPerStep;
+			double angleB1 = Math.toRadians(degB1);
+			double baseLengthB1 = Math.cos(angleB1)*width1;
+			double deltaXB1 = Math.cos(angleInZPlane1)*baseLengthB1;
+			double deltaYB1 = Math.sin(angleInZPlane1)*baseLengthB1;
+			double deltaZB1 = Math.sin(angleB1)*height1;
 			
-			Vector3D p1 = new Vector3D(basePoint3D.x+deltaX1,basePoint3D.y+deltaY1,basePoint3D.z+deltaZ1);
-			Vector3D p2 = new Vector3D(basePoint3D.x+deltaX2,basePoint3D.y+deltaY2,basePoint3D.z+deltaZ2);
+			double degA2 = i*degreesPerStep;
+			double angleA2 = Math.toRadians(degA2);
+			double baseLengthA2 = Math.cos(angleA2)*width2;
+			double deltaXA2 = Math.cos(angleInZPlane2)*baseLengthA2;
+			double deltaYA2 = Math.sin(angleInZPlane2)*baseLengthA2;
+			double deltaZA2 = Math.sin(angleA2)*height2;
 			
-			Triangle triangle = new Triangle(p1, p2, basePoint3D);
-			mesh.add(triangle);
+			double degB2 = (i+1)*degreesPerStep;
+			double angleB2 = Math.toRadians(degB2);
+			double baseLengthB2 = Math.cos(angleB2)*width2;
+			double deltaXB2 = Math.cos(angleInZPlane2)*baseLengthB2;
+			double deltaYB2 = Math.sin(angleInZPlane2)*baseLengthB2;
+			double deltaZB2 = Math.sin(angleB2)*height2;
+			
+			Vector3D pA1 = new Vector3D(basePoint3D1.x+deltaXA1,basePoint3D1.y+deltaYA1,basePoint3D1.z+deltaZA1);
+			Vector3D pB1 = new Vector3D(basePoint3D1.x+deltaXB1,basePoint3D1.y+deltaYB1,basePoint3D1.z+deltaZB1);
+			Vector3D pA2 = new Vector3D(basePoint3D2.x+deltaXA2,basePoint3D2.y+deltaYA2,basePoint3D2.z+deltaZA2);
+			Vector3D pB2 = new Vector3D(basePoint3D2.x+deltaXB2,basePoint3D2.y+deltaYB2,basePoint3D2.z+deltaZB2);
+			
+			Triangle triangle1 = new Triangle(pA1, pA2, pB2);
+			Triangle triangle2 = new Triangle(pA1, pB1, pB2);
+			mesh.add(triangle1);
+			mesh.add(triangle2);
 		}
+	}
+	
+	private void createQuarterOval(ChordalAxisPoint point, TriangulationPoint outlinePoint1, TriangulationPoint outlinePoint2, int nrOfFaces)
+	{
+		TriangulationPoint basePoint = point.getPoint();
+		Vector3D outlinePoint3D1 = new Vector3D(outlinePoint1.getX(), outlinePoint1.getY(), 0.0);
+		Vector3D outlinePoint3D2 = new Vector3D(outlinePoint2.getX(), outlinePoint2.getY(), 0.0);
+		Vector3D basePoint3D = new Vector3D(basePoint.getX(), basePoint.getY(), 0.0);
+		double height = point.getZ();
+		double width1 = Util.distance(point.getPoint(), outlinePoint1);
+		double width2 = Util.distance(point.getPoint(), outlinePoint2);
+		double degreesPerStep = 90.0/nrOfFaces;
+		double angleInZPlane1 = Util.getAngle(basePoint3D.x, basePoint3D.y, outlinePoint3D1.x, outlinePoint3D1.y);
+		double angleInZPlane2 = Util.getAngle(basePoint3D.x, basePoint3D.y, outlinePoint3D2.x, outlinePoint3D2.y);
 		
-//		Triangle lastTriangle = new Triangle(p1, p2, p3)
+		for(int i=0; i<nrOfFaces; i++)
+		{
+			double degA1 = i*degreesPerStep;
+			double angleA1 = Math.toRadians(degA1);
+			double baseLengthA1 = Math.cos(angleA1)*width1;
+			double deltaXA1 = Math.cos(angleInZPlane1)*baseLengthA1;
+			double deltaYA1 = Math.sin(angleInZPlane1)*baseLengthA1;
+			double deltaZA1 = Math.sin(angleA1)*height;
+			
+			double degB1 = (i+1)*degreesPerStep;
+			double angleB1 = Math.toRadians(degB1);
+			double baseLengthB1 = Math.cos(angleB1)*width1;
+			double deltaXB1 = Math.cos(angleInZPlane1)*baseLengthB1;
+			double deltaYB1 = Math.sin(angleInZPlane1)*baseLengthB1;
+			double deltaZB1 = Math.sin(angleB1)*height;
+			
+			double degA2 = i*degreesPerStep;
+			double angleA2 = Math.toRadians(degA2);
+			double baseLengthA2 = Math.cos(angleA2)*width2;
+			double deltaXA2 = Math.cos(angleInZPlane2)*baseLengthA2;
+			double deltaYA2 = Math.sin(angleInZPlane2)*baseLengthA2;
+			double deltaZA2 = Math.sin(angleA2)*height;
+			
+			double degB2 = (i+1)*degreesPerStep;
+			double angleB2 = Math.toRadians(degB2);
+			double baseLengthB2 = Math.cos(angleB2)*width2;
+			double deltaXB2 = Math.cos(angleInZPlane2)*baseLengthB2;
+			double deltaYB2 = Math.sin(angleInZPlane2)*baseLengthB2;
+			double deltaZB2 = Math.sin(angleB2)*height;
+			
+			Vector3D pA1 = new Vector3D(basePoint3D.x+deltaXA1,basePoint3D.y+deltaYA1,basePoint3D.z+deltaZA1);
+			Vector3D pB1 = new Vector3D(basePoint3D.x+deltaXB1,basePoint3D.y+deltaYB1,basePoint3D.z+deltaZB1);
+			Vector3D pA2 = new Vector3D(basePoint3D.x+deltaXA2,basePoint3D.y+deltaYA2,basePoint3D.z+deltaZA2);
+			Vector3D pB2 = new Vector3D(basePoint3D.x+deltaXB2,basePoint3D.y+deltaYB2,basePoint3D.z+deltaZB2);
+			
+			Triangle triangle1 = new Triangle(pA1, pA2, pB2);
+			Triangle triangle2 = new Triangle(pA1, pB1, pB2);
+			mesh.add(triangle1);
+			mesh.add(triangle2);
+		}
 	}
 
 	private void lowerChordalAxis()

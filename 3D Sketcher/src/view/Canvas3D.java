@@ -185,6 +185,7 @@ public class Canvas3D extends Composite implements Runnable
 		if(showMesh)
 		{
 			drawMesh();
+			drawOutline();
 			drawChordalAxis();
 		}
 		else
@@ -207,23 +208,30 @@ public class Canvas3D extends Composite implements Runnable
 	private void drawMesh()
 	{
 		GL11.glLineWidth(1.0f);
-		GL11.glColor3f(.6f, .6f, .6f);
-//		GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
+		GL11.glColor3f(.7f, .7f, .7f);
+		GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
 
 		ArrayList<Triangle> mesh = model.getMesh();
 		for (Triangle triangle : mesh)
 		{
-			fillTriangle(triangle);
+			drawTriangle(triangle);
 		}
+		
+		GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);
+		GL11.glColor3f(.2f, .6f, .5f);
+		for (Triangle triangle : mesh)
+		{
+			drawTriangle(triangle);
+		}
+		
 	}
 	
-	private void fillTriangle(Triangle triangle)
+	private void drawTriangle(Triangle triangle)
 	{
 		GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
 		GL11.glVertex3d(triangle.p1.x,triangle.p1.y,triangle.p1.z);
 		GL11.glVertex3d(triangle.p2.x,triangle.p2.y,triangle.p2.z);
 		GL11.glVertex3d(triangle.p3.x,triangle.p3.y,triangle.p3.z);
-//		GL11.glVertex3d(triangle.p1.x,triangle.p1.y,triangle.p1.z);
 		GL11.glEnd();
 	}
 	
