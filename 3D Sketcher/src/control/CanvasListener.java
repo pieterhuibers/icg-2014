@@ -29,6 +29,9 @@ public class CanvasListener implements MouseListener, MouseMoveListener, KeyList
 	private Point start;
 	private Point end;
 	
+	private int delayMS = 100;
+	private long lastTimePointAdded;
+	
 //	private static final double DEFAULT_ROTATION_SPEED = 0.1;
 //	private static final double FAST_ROTATION_SPEED = 0.5;
 
@@ -55,7 +58,10 @@ public class CanvasListener implements MouseListener, MouseMoveListener, KeyList
 		{
 			leftMouseDown = true;
 			if(!model.isClosed())
+			{
 				addClickedPosition(e.x,e.y);
+				lastTimePointAdded = System.currentTimeMillis();
+			}
 		}
 		else if(e.button == 3)
 		{
@@ -80,6 +86,14 @@ public class CanvasListener implements MouseListener, MouseMoveListener, KeyList
 	@Override
 	public void mouseMove(MouseEvent e)
 	{
+		if(leftMouseDown)
+		{
+			if(!model.isClosed() && System.currentTimeMillis() - lastTimePointAdded > delayMS)
+			{
+				addClickedPosition(e.x,e.y);
+				lastTimePointAdded = System.currentTimeMillis();
+			}
+		}
 		if(rightMouseDown)
 		{
 			int diffX = e.x-start.x;
